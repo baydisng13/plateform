@@ -9,12 +9,56 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ExampleRouteImport } from './routes/example'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as OrderRouteImport } from './routes/order'
+import { Route as NewOrderRouteImport } from './routes/new-order'
+import { Route as MenuRouteImport } from './routes/menu'
+import { Route as KitchenRouteImport } from './routes/kitchen'
+import { Route as ExpensesRouteImport } from './routes/expenses'
+import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SettingsTelegramRouteImport } from './routes/settings/telegram'
+import { Route as SettingsTablesRouteImport } from './routes/settings/tables'
+import { Route as SettingsStaffRouteImport } from './routes/settings/staff'
+import { Route as SettingsRestaurantRouteImport } from './routes/settings/restaurant'
+import { Route as SettingsOrderTypesRouteImport } from './routes/settings/order-types'
+import { Route as SettingsMenuTagsRouteImport } from './routes/settings/menu-tags'
+import { Route as SettingsExpenseCategoriesRouteImport } from './routes/settings/expense-categories'
+import { Route as SettingsCategoriesRouteImport } from './routes/settings/categories'
 
-const ExampleRoute = ExampleRouteImport.update({
-  id: '/example',
-  path: '/example',
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrderRoute = OrderRouteImport.update({
+  id: '/order',
+  path: '/order',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NewOrderRoute = NewOrderRouteImport.update({
+  id: '/new-order',
+  path: '/new-order',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MenuRoute = MenuRouteImport.update({
+  id: '/menu',
+  path: '/menu',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KitchenRoute = KitchenRouteImport.update({
+  id: '/kitchen',
+  path: '/kitchen',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExpensesRoute = ExpensesRouteImport.update({
+  id: '/expenses',
+  path: '/expenses',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnalyticsRoute = AnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -22,40 +66,220 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsTelegramRoute = SettingsTelegramRouteImport.update({
+  id: '/telegram',
+  path: '/telegram',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsTablesRoute = SettingsTablesRouteImport.update({
+  id: '/tables',
+  path: '/tables',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsStaffRoute = SettingsStaffRouteImport.update({
+  id: '/staff',
+  path: '/staff',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsRestaurantRoute = SettingsRestaurantRouteImport.update({
+  id: '/restaurant',
+  path: '/restaurant',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsOrderTypesRoute = SettingsOrderTypesRouteImport.update({
+  id: '/order-types',
+  path: '/order-types',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsMenuTagsRoute = SettingsMenuTagsRouteImport.update({
+  id: '/menu-tags',
+  path: '/menu-tags',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsExpenseCategoriesRoute =
+  SettingsExpenseCategoriesRouteImport.update({
+    id: '/expense-categories',
+    path: '/expense-categories',
+    getParentRoute: () => SettingsRoute,
+  } as any)
+const SettingsCategoriesRoute = SettingsCategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
+  getParentRoute: () => SettingsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/example': typeof ExampleRoute
+  '/analytics': typeof AnalyticsRoute
+  '/expenses': typeof ExpensesRoute
+  '/kitchen': typeof KitchenRoute
+  '/menu': typeof MenuRoute
+  '/new-order': typeof NewOrderRoute
+  '/order': typeof OrderRoute
+  '/settings': typeof SettingsRouteWithChildren
+  '/settings/categories': typeof SettingsCategoriesRoute
+  '/settings/expense-categories': typeof SettingsExpenseCategoriesRoute
+  '/settings/menu-tags': typeof SettingsMenuTagsRoute
+  '/settings/order-types': typeof SettingsOrderTypesRoute
+  '/settings/restaurant': typeof SettingsRestaurantRoute
+  '/settings/staff': typeof SettingsStaffRoute
+  '/settings/tables': typeof SettingsTablesRoute
+  '/settings/telegram': typeof SettingsTelegramRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/example': typeof ExampleRoute
+  '/analytics': typeof AnalyticsRoute
+  '/expenses': typeof ExpensesRoute
+  '/kitchen': typeof KitchenRoute
+  '/menu': typeof MenuRoute
+  '/new-order': typeof NewOrderRoute
+  '/order': typeof OrderRoute
+  '/settings': typeof SettingsRouteWithChildren
+  '/settings/categories': typeof SettingsCategoriesRoute
+  '/settings/expense-categories': typeof SettingsExpenseCategoriesRoute
+  '/settings/menu-tags': typeof SettingsMenuTagsRoute
+  '/settings/order-types': typeof SettingsOrderTypesRoute
+  '/settings/restaurant': typeof SettingsRestaurantRoute
+  '/settings/staff': typeof SettingsStaffRoute
+  '/settings/tables': typeof SettingsTablesRoute
+  '/settings/telegram': typeof SettingsTelegramRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/example': typeof ExampleRoute
+  '/analytics': typeof AnalyticsRoute
+  '/expenses': typeof ExpensesRoute
+  '/kitchen': typeof KitchenRoute
+  '/menu': typeof MenuRoute
+  '/new-order': typeof NewOrderRoute
+  '/order': typeof OrderRoute
+  '/settings': typeof SettingsRouteWithChildren
+  '/settings/categories': typeof SettingsCategoriesRoute
+  '/settings/expense-categories': typeof SettingsExpenseCategoriesRoute
+  '/settings/menu-tags': typeof SettingsMenuTagsRoute
+  '/settings/order-types': typeof SettingsOrderTypesRoute
+  '/settings/restaurant': typeof SettingsRestaurantRoute
+  '/settings/staff': typeof SettingsStaffRoute
+  '/settings/tables': typeof SettingsTablesRoute
+  '/settings/telegram': typeof SettingsTelegramRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/example'
+  fullPaths:
+    | '/'
+    | '/analytics'
+    | '/expenses'
+    | '/kitchen'
+    | '/menu'
+    | '/new-order'
+    | '/order'
+    | '/settings'
+    | '/settings/categories'
+    | '/settings/expense-categories'
+    | '/settings/menu-tags'
+    | '/settings/order-types'
+    | '/settings/restaurant'
+    | '/settings/staff'
+    | '/settings/tables'
+    | '/settings/telegram'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/example'
-  id: '__root__' | '/' | '/example'
+  to:
+    | '/'
+    | '/analytics'
+    | '/expenses'
+    | '/kitchen'
+    | '/menu'
+    | '/new-order'
+    | '/order'
+    | '/settings'
+    | '/settings/categories'
+    | '/settings/expense-categories'
+    | '/settings/menu-tags'
+    | '/settings/order-types'
+    | '/settings/restaurant'
+    | '/settings/staff'
+    | '/settings/tables'
+    | '/settings/telegram'
+  id:
+    | '__root__'
+    | '/'
+    | '/analytics'
+    | '/expenses'
+    | '/kitchen'
+    | '/menu'
+    | '/new-order'
+    | '/order'
+    | '/settings'
+    | '/settings/categories'
+    | '/settings/expense-categories'
+    | '/settings/menu-tags'
+    | '/settings/order-types'
+    | '/settings/restaurant'
+    | '/settings/staff'
+    | '/settings/tables'
+    | '/settings/telegram'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ExampleRoute: typeof ExampleRoute
+  AnalyticsRoute: typeof AnalyticsRoute
+  ExpensesRoute: typeof ExpensesRoute
+  KitchenRoute: typeof KitchenRoute
+  MenuRoute: typeof MenuRoute
+  NewOrderRoute: typeof NewOrderRoute
+  OrderRoute: typeof OrderRoute
+  SettingsRoute: typeof SettingsRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/example': {
-      id: '/example'
-      path: '/example'
-      fullPath: '/example'
-      preLoaderRoute: typeof ExampleRouteImport
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/order': {
+      id: '/order'
+      path: '/order'
+      fullPath: '/order'
+      preLoaderRoute: typeof OrderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/new-order': {
+      id: '/new-order'
+      path: '/new-order'
+      fullPath: '/new-order'
+      preLoaderRoute: typeof NewOrderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/menu': {
+      id: '/menu'
+      path: '/menu'
+      fullPath: '/menu'
+      preLoaderRoute: typeof MenuRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kitchen': {
+      id: '/kitchen'
+      path: '/kitchen'
+      fullPath: '/kitchen'
+      preLoaderRoute: typeof KitchenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/expenses': {
+      id: '/expenses'
+      path: '/expenses'
+      fullPath: '/expenses'
+      preLoaderRoute: typeof ExpensesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analytics': {
+      id: '/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -65,12 +289,100 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/telegram': {
+      id: '/settings/telegram'
+      path: '/telegram'
+      fullPath: '/settings/telegram'
+      preLoaderRoute: typeof SettingsTelegramRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/tables': {
+      id: '/settings/tables'
+      path: '/tables'
+      fullPath: '/settings/tables'
+      preLoaderRoute: typeof SettingsTablesRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/staff': {
+      id: '/settings/staff'
+      path: '/staff'
+      fullPath: '/settings/staff'
+      preLoaderRoute: typeof SettingsStaffRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/restaurant': {
+      id: '/settings/restaurant'
+      path: '/restaurant'
+      fullPath: '/settings/restaurant'
+      preLoaderRoute: typeof SettingsRestaurantRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/order-types': {
+      id: '/settings/order-types'
+      path: '/order-types'
+      fullPath: '/settings/order-types'
+      preLoaderRoute: typeof SettingsOrderTypesRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/menu-tags': {
+      id: '/settings/menu-tags'
+      path: '/menu-tags'
+      fullPath: '/settings/menu-tags'
+      preLoaderRoute: typeof SettingsMenuTagsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/expense-categories': {
+      id: '/settings/expense-categories'
+      path: '/expense-categories'
+      fullPath: '/settings/expense-categories'
+      preLoaderRoute: typeof SettingsExpenseCategoriesRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/categories': {
+      id: '/settings/categories'
+      path: '/categories'
+      fullPath: '/settings/categories'
+      preLoaderRoute: typeof SettingsCategoriesRouteImport
+      parentRoute: typeof SettingsRoute
+    }
   }
 }
 
+interface SettingsRouteChildren {
+  SettingsCategoriesRoute: typeof SettingsCategoriesRoute
+  SettingsExpenseCategoriesRoute: typeof SettingsExpenseCategoriesRoute
+  SettingsMenuTagsRoute: typeof SettingsMenuTagsRoute
+  SettingsOrderTypesRoute: typeof SettingsOrderTypesRoute
+  SettingsRestaurantRoute: typeof SettingsRestaurantRoute
+  SettingsStaffRoute: typeof SettingsStaffRoute
+  SettingsTablesRoute: typeof SettingsTablesRoute
+  SettingsTelegramRoute: typeof SettingsTelegramRoute
+}
+
+const SettingsRouteChildren: SettingsRouteChildren = {
+  SettingsCategoriesRoute: SettingsCategoriesRoute,
+  SettingsExpenseCategoriesRoute: SettingsExpenseCategoriesRoute,
+  SettingsMenuTagsRoute: SettingsMenuTagsRoute,
+  SettingsOrderTypesRoute: SettingsOrderTypesRoute,
+  SettingsRestaurantRoute: SettingsRestaurantRoute,
+  SettingsStaffRoute: SettingsStaffRoute,
+  SettingsTablesRoute: SettingsTablesRoute,
+  SettingsTelegramRoute: SettingsTelegramRoute,
+}
+
+const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
+  SettingsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ExampleRoute: ExampleRoute,
+  AnalyticsRoute: AnalyticsRoute,
+  ExpensesRoute: ExpensesRoute,
+  KitchenRoute: KitchenRoute,
+  MenuRoute: MenuRoute,
+  NewOrderRoute: NewOrderRoute,
+  OrderRoute: OrderRoute,
+  SettingsRoute: SettingsRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

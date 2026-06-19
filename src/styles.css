@@ -57,6 +57,23 @@ body {
   --sidebar-border: oklch(0.92 0 0);
   --sidebar-ring: oklch(0.708 0 0);
 
+  /* Restaurant design tokens */
+  --surface: oklch(1 0 0);
+  --surface-muted: oklch(0.972 0 0);
+  --hairline: oklch(0.93 0 0);
+
+  /* Order status colors */
+  --status-pending: oklch(0.45 0.14 250);
+  --status-pending-bg: oklch(0.95 0.03 250);
+  --status-kitchen: oklch(0.5 0.14 60);
+  --status-kitchen-bg: oklch(0.96 0.05 75);
+  --status-ready: oklch(0.45 0.14 158);
+  --status-ready-bg: oklch(0.95 0.04 158);
+  --status-awaiting: oklch(0.5 0.16 40);
+  --status-awaiting-bg: oklch(0.96 0.05 50);
+  --status-done: oklch(0.5 0.01 250);
+  --status-done-bg: oklch(0.95 0.005 250);
+
   --font-sans: Inter, sans-serif;
   --font-serif: Geist, Geist Fallback, sans-serif;
   --font-mono: Geist Mono, Geist Mono Fallback, monospace;
@@ -151,6 +168,22 @@ body {
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Restaurant token mappings */
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-hairline: var(--hairline);
+  --color-status-pending: var(--status-pending);
+  --color-status-pending-bg: var(--status-pending-bg);
+  --color-status-kitchen: var(--status-kitchen);
+  --color-status-kitchen-bg: var(--status-kitchen-bg);
+  --color-status-ready: var(--status-ready);
+  --color-status-ready-bg: var(--status-ready-bg);
+  --color-status-awaiting: var(--status-awaiting);
+  --color-status-awaiting-bg: var(--status-awaiting-bg);
+  --color-status-done: var(--status-done);
+  --color-status-done-bg: var(--status-done-bg);
+  --shadow-soft: 0 1px 2px oklch(0.2 0.04 250 / 0.04), 0 8px 24px -12px oklch(0.2 0.04 250 / 0.08);
 
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);

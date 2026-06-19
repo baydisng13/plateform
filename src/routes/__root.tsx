@@ -6,15 +6,15 @@ import {
 	Outlet,
 	Scripts,
 } from "@tanstack/react-router";
-import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-import { AppShell } from "@/components/app-shell";
 import { Toaster } from "@/components/ui/sonner";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
+import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
+import { OrdersProvider } from "@/lib/orders-store";
+import { TagsProvider } from "@/lib/tags-store";
 import appCss from "../styles.css?url";
 
-const SITE_TITLE = "Cookflow";
-const SITE_DESCRIPTION =
-	"Plan meals, organize recipes, and cook with confidence.";
+const SITE_TITLE = "Fresh & Pressed";
+const SITE_DESCRIPTION = "Restaurant management system.";
 
 interface RouterContext {
 	queryClient: QueryClient;
@@ -43,9 +43,11 @@ function RootLayout() {
 				<HeadContent />
 			</head>
 			<body>
-				<AppShell>
-					<Outlet />
-				</AppShell>
+				<TagsProvider>
+					<OrdersProvider>
+						<Outlet />
+					</OrdersProvider>
+				</TagsProvider>
 				<Toaster richColors position="top-right" />
 				<TanStackDevtools
 					config={{ position: "bottom-right" }}
