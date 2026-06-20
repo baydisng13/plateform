@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { Plus, Pencil, Trash2 } from "lucide-react";
-import { useTags } from "@/lib/tags-store";
+import { getMenuTags, createMenuTag, updateMenuTag, deleteMenuTag } from "@/lib/server/menu";
 import {
 	Dialog,
 	DialogContent,
@@ -13,8 +13,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/settings/menu-tags")({
-	head: () => ({ meta: [{ title: "Menu Tags — Fresh & Pressed" }] }),
+type DbTag = Awaited<ReturnType<typeof getMenuTags>>[number];
+
+export const Route = createFileRoute("/_auth/settings/menu-tags")({
+	head: () => ({ meta: [{ title: "Menu Tags — PlateForm" }] }),
+	loader: () => getMenuTags(),
 	component: MenuTagsPage,
 });
 
@@ -30,22 +33,27 @@ const COLOR_OPTIONS = [
 ];
 
 function MenuTagsPage() {
-	const { tags, addTag, updateTag, removeTag } = useTags();
+	const tags = Route.useLoaderData();
+	const router = useRouter();
 	const [dialogOpen, setDialogOpen] = useState(false);
-	const [editId, setEditId] = useState<string | null>(null);
+	const [editItem, setEditItem] = useState<DbTag | null>(null);
 
-	const editTarget = tags.find((t) => t.id === editId) ?? null;
+	const openNew = () => { setEditItem(null); setDialogOpen(true); };
+	const openEdit = (t: DbTag) => { setEditItem(t); setDialogOpen(true); };
 
-	const openNew = () => { setEditId(null); setDialogOpen(true); };
-	const openEdit = (id: string) => { setEditId(id); setDialogOpen(true); };
+	const handleDelete = async (id: string) => {
+		await deleteMenuTag({ data: { id } });
+		router.invalidate();
+	};
 
-	const handleSave = (name: string, color: string) => {
-		if (editTarget) {
-			updateTag(editTarget.id, { name, color });
+	const handleSave = async (name: string, color: string) => {
+		if (editItem) {
+			await updateMenuTag({ data: { id: editItem.id, name, color } });
 		} else {
-			addTag({ name, color });
+			await createMenuTag({ data: { name, color } });
 		}
 		setDialogOpen(false);
+		router.invalidate();
 	};
 
 	return (
@@ -74,28 +82,18 @@ function MenuTagsPage() {
 				) : (
 					<ul>
 						{tags.map((t) => (
-							<li
-								key={t.id}
-								className="flex items-center gap-4 border-b px-5 py-4 last:border-0"
-							>
-								<span
-									className={cn(
-										"rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider",
-										t.color,
-									)}
-								>
+							<li key={t.id} className="flex items-center gap-4 border-b px-5 py-4 last:border-0">
+								<span className={cn("rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider", t.color)}>
 									{t.name}
 								</span>
 								<span className="flex-1" />
 								{t.isDefault && (
-									<span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-										default
-									</span>
+									<span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">default</span>
 								)}
 								<div className="flex items-center gap-1">
 									<button
 										type="button"
-										onClick={() => openEdit(t.id)}
+										onClick={() => openEdit(t)}
 										className="grid size-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
 										aria-label={`Edit ${t.name}`}
 									>
@@ -104,7 +102,7 @@ function MenuTagsPage() {
 									{!t.isDefault && (
 										<button
 											type="button"
-											onClick={() => removeTag(t.id)}
+											onClick={() => handleDelete(t.id)}
 											className="grid size-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
 											aria-label={`Delete ${t.name}`}
 										>
@@ -120,7 +118,7 @@ function MenuTagsPage() {
 
 			<TagDialog
 				open={dialogOpen}
-				tag={editTarget}
+				tag={editItem}
 				onClose={() => setDialogOpen(false)}
 				onSave={handleSave}
 			/>
@@ -135,12 +133,13 @@ function TagDialog({
 	onSave,
 }: {
 	open: boolean;
-	tag: { name: string; color: string } | null;
+	tag: DbTag | null;
 	onClose: () => void;
-	onSave: (name: string, color: string) => void;
+	onSave: (name: string, color: string) => Promise<void>;
 }) {
 	const [name, setName] = useState(tag?.name ?? "");
 	const [color, setColor] = useState(tag?.color ?? COLOR_OPTIONS[0].classes);
+	const [saving, setSaving] = useState(false);
 
 	const handleOpenChange = (v: boolean) => {
 		if (!v) onClose();
@@ -148,6 +147,13 @@ function TagDialog({
 			setName(tag?.name ?? "");
 			setColor(tag?.color ?? COLOR_OPTIONS[0].classes);
 		}
+	};
+
+	const handleSave = async () => {
+		if (!name.trim()) return;
+		setSaving(true);
+		await onSave(name.trim(), color);
+		setSaving(false);
 	};
 
 	return (
@@ -159,15 +165,8 @@ function TagDialog({
 				<div className="space-y-4 px-8 pb-8 pt-2">
 					<div className="space-y-1.5">
 						<Label htmlFor="tag-name">Tag Name</Label>
-						<Input
-							id="tag-name"
-							value={name}
-							onChange={(e) => setName(e.target.value)}
-							placeholder="e.g. Fasting"
-							autoFocus
-						/>
+						<Input id="tag-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Fasting" autoFocus />
 					</div>
-
 					<div className="space-y-1.5">
 						<Label>Color</Label>
 						<div className="flex flex-wrap gap-2">
@@ -179,9 +178,7 @@ function TagDialog({
 									className={cn(
 										"flex size-8 items-center justify-center rounded-full transition-all",
 										opt.dot,
-										color === opt.classes
-											? "scale-110 ring-2 ring-foreground ring-offset-2"
-											: "opacity-70 hover:opacity-100",
+										color === opt.classes ? "scale-110 ring-2 ring-foreground ring-offset-2" : "opacity-70 hover:opacity-100",
 									)}
 									aria-label={opt.label}
 								/>
@@ -189,27 +186,14 @@ function TagDialog({
 						</div>
 						{name && (
 							<div className="mt-2">
-								<span
-									className={cn(
-										"rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider",
-										color,
-									)}
-								>
-									{name}
-								</span>
+								<span className={cn("rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider", color)}>{name}</span>
 							</div>
 						)}
 					</div>
-
 					<div className="flex gap-2">
-						<Button variant="outline" onClick={onClose} className="flex-1">
-							Cancel
-						</Button>
-						<Button
-							onClick={() => name.trim() && onSave(name.trim(), color)}
-							className="flex-1"
-						>
-							{tag ? "Save" : "Add Tag"}
+						<Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
+						<Button onClick={handleSave} disabled={saving} className="flex-1">
+							{saving ? "Saving…" : tag ? "Save" : "Add Tag"}
 						</Button>
 					</div>
 				</div>
