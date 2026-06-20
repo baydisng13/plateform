@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { MessageSquare, CheckCircle2, Trash2, UserPlus } from "lucide-react";
+import { getTelegramSettings, saveTelegramSettings } from "@/lib/server/settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,107 +21,65 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/settings/telegram")({
-	head: () => ({ meta: [{ title: "Telegram — Fresh & Pressed" }] }),
+type DbSettings = Awaited<ReturnType<typeof getTelegramSettings>>;
+type Contact = { id: string; name: string; username: string; role: string; chatId: string };
+
+export const Route = createFileRoute("/_auth/settings/telegram")({
+	head: () => ({ meta: [{ title: "Telegram — PlateForm" }] }),
+	loader: () => getTelegramSettings(),
 	component: TelegramPage,
 });
 
-type Role = "Owner" | "Chef" | "Waiter";
-
-interface Contact {
-	id: string;
-	name: string;
-	username: string;
-	role: Role;
-	chatId: string;
-}
-
-interface NotifConfig {
+type NotifConfig = {
 	key: string;
 	label: string;
 	description: string;
 	enabled: boolean;
 	recipients: string[];
-}
-
-const roleColor: Record<Role, string> = {
-	Owner: "bg-primary/10 text-primary",
-	Chef: "bg-amber-100 text-amber-700",
-	Waiter: "bg-sky-100 text-sky-700",
 };
 
-const INITIAL_CONTACTS: Contact[] = [
-	{ id: "c1", name: "Selam Bekele", username: "selambekele", role: "Owner", chatId: "-100111111111" },
-	{ id: "c2", name: "Dawit Mulugeta", username: "dawitm", role: "Chef", chatId: "-100222222222" },
-	{ id: "c3", name: "Hana Girma", username: "hanagirma", role: "Waiter", chatId: "-100333333333" },
+const NOTIF_DEFAULTS: NotifConfig[] = [
+	{ key: "new_order", label: "New order received", description: "Sent when any order arrives in the system", enabled: true, recipients: [] },
+	{ key: "online_confirm", label: "Online order needs confirmation", description: "Sent when an online order awaits a call-back", enabled: true, recipients: [] },
+	{ key: "order_ready", label: "Order ready", description: "Sent when chef marks an order as ready", enabled: true, recipients: [] },
+	{ key: "payment_confirmed", label: "Payment confirmed", description: "Sent after waiter confirms payment", enabled: true, recipients: [] },
 ];
 
-const INITIAL_NOTIFS: NotifConfig[] = [
-	{
-		key: "new_order",
-		label: "New order received",
-		description: "Sent when any order arrives in the system",
-		enabled: true,
-		recipients: ["c1", "c2"],
-	},
-	{
-		key: "online_confirm",
-		label: "Online order needs confirmation",
-		description: "Sent when an online order awaits a call-back",
-		enabled: true,
-		recipients: ["c1"],
-	},
-	{
-		key: "order_ready",
-		label: "Order ready",
-		description: "Sent when chef marks an order as ready",
-		enabled: true,
-		recipients: ["c1", "c3"],
-	},
-	{
-		key: "payment_confirmed",
-		label: "Payment confirmed",
-		description: "Sent after waiter confirms payment",
-		enabled: true,
-		recipients: ["c1"],
-	},
-];
+const roleColor: Record<string, string> = {
+	owner: "bg-primary/10 text-primary",
+	chef: "bg-amber-100 text-amber-700",
+	waiter: "bg-sky-100 text-sky-700",
+};
 
 function TelegramPage() {
+	const settings = Route.useLoaderData() as DbSettings;
+	const router = useRouter();
+
 	const [token, setToken] = useState("");
-	const [saved, setSaved] = useState(false);
-	const [contacts, setContacts] = useState<Contact[]>(INITIAL_CONTACTS);
-	const [notifs, setNotifs] = useState<NotifConfig[]>(INITIAL_NOTIFS);
+	const [contacts, setContacts] = useState<Contact[]>(settings?.contacts ?? []);
+	const [notifs, setNotifs] = useState<NotifConfig[]>(NOTIF_DEFAULTS);
 	const [contactDialog, setContactDialog] = useState(false);
 	const [editContact, setEditContact] = useState<Contact | null>(null);
+	const [saving, setSaving] = useState(false);
+	const [saved, setSaved] = useState(false);
 
 	const toggleNotif = (key: string) =>
-		setNotifs((arr) =>
-			arr.map((n) => (n.key === key ? { ...n, enabled: !n.enabled } : n)),
-		);
+		setNotifs((arr) => arr.map((n) => (n.key === key ? { ...n, enabled: !n.enabled } : n)));
 
 	const toggleRecipient = (key: string, contactId: string) =>
 		setNotifs((arr) =>
 			arr.map((n) => {
 				if (n.key !== key) return n;
 				const has = n.recipients.includes(contactId);
-				return {
-					...n,
-					recipients: has
-						? n.recipients.filter((x) => x !== contactId)
-						: [...n.recipients, contactId],
-				};
+				return { ...n, recipients: has ? n.recipients.filter((x) => x !== contactId) : [...n.recipients, contactId] };
 			}),
 		);
 
 	const saveContact = (data: Omit<Contact, "id">) => {
 		if (editContact) {
-			setContacts((arr) =>
-				arr.map((c) => (c.id === editContact.id ? { ...c, ...data } : c)),
-			);
+			setContacts((arr) => arr.map((c) => (c.id === editContact.id ? { ...c, ...data } : c)));
 		} else {
-			const id = `c${Date.now()}`;
-			setContacts((arr) => [...arr, { ...data, id }]);
+			setContacts((arr) => [...arr, { ...data, id: `c${Date.now()}` }]);
 		}
 		setContactDialog(false);
 		setEditContact(null);
@@ -128,17 +87,29 @@ function TelegramPage() {
 
 	const removeContact = (id: string) => {
 		setContacts((arr) => arr.filter((c) => c.id !== id));
-		setNotifs((arr) =>
-			arr.map((n) => ({
-				...n,
-				recipients: n.recipients.filter((r) => r !== id),
-			})),
-		);
+		setNotifs((arr) => arr.map((n) => ({ ...n, recipients: n.recipients.filter((r) => r !== id) })));
 	};
 
-	const handleSave = () => {
+	const handleSave = async () => {
+		setSaving(true);
+		const ownerChatIds = contacts.filter((c) => c.role === "owner").map((c) => c.chatId).filter(Boolean);
+		const chefChatIds = contacts.filter((c) => c.role === "chef").map((c) => c.chatId).filter(Boolean);
+		const waiterChatIds = contacts.filter((c) => c.role === "waiter").map((c) => c.chatId).filter(Boolean);
+
+		await saveTelegramSettings({
+			data: {
+				...(token ? { botToken: token } : {}),
+				contacts,
+				ownerChatIds,
+				chefChatIds,
+				waiterChatIds,
+			},
+		});
+		setSaving(false);
 		setSaved(true);
+		setToken("");
 		setTimeout(() => setSaved(false), 2500);
+		router.invalidate();
 	};
 
 	return (
@@ -150,7 +121,6 @@ function TelegramPage() {
 				</p>
 			</div>
 
-			{/* Bot token */}
 			<div className="rounded-3xl border bg-card p-6 shadow-sm">
 				<div className="mb-4 flex items-center gap-2">
 					<MessageSquare className="size-4 text-primary" strokeWidth={2} />
@@ -163,7 +133,7 @@ function TelegramPage() {
 						type="password"
 						value={token}
 						onChange={(e) => setToken(e.target.value)}
-						placeholder="7xxxxxxxx:AAxxxxxxxxxxxxxxxxxxxxxx"
+						placeholder={settings?.hasToken ? "Token saved — enter new to replace" : "7xxxxxxxx:AAxxxxxxxxxxxxxxxxxxxxxx"}
 					/>
 					<p className="text-xs text-muted-foreground">
 						Create a bot via @BotFather on Telegram.
@@ -171,7 +141,6 @@ function TelegramPage() {
 				</div>
 			</div>
 
-			{/* Contacts */}
 			<div className="rounded-3xl border bg-card p-6 shadow-sm">
 				<div className="mb-4 flex items-start justify-between">
 					<div>
@@ -183,10 +152,7 @@ function TelegramPage() {
 					<Button
 						size="sm"
 						variant="outline"
-						onClick={() => {
-							setEditContact(null);
-							setContactDialog(true);
-						}}
+						onClick={() => { setEditContact(null); setContactDialog(true); }}
 					>
 						<UserPlus className="size-3.5" />
 						Add Contact
@@ -194,40 +160,25 @@ function TelegramPage() {
 				</div>
 
 				{contacts.length === 0 ? (
-					<p className="py-6 text-center text-sm text-muted-foreground">
-						No contacts yet.
-					</p>
+					<p className="py-6 text-center text-sm text-muted-foreground">No contacts yet.</p>
 				) : (
 					<ul className="space-y-2">
 						{contacts.map((c) => (
-							<li
-								key={c.id}
-								className="flex items-center gap-3 rounded-2xl border px-4 py-3"
-							>
+							<li key={c.id} className="flex items-center gap-3 rounded-2xl border px-4 py-3">
 								<div className="grid size-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-emerald-200 to-emerald-400 text-xs font-bold text-white">
 									{c.name.charAt(0)}
 								</div>
 								<div className="min-w-0 flex-1">
-									<p className="truncate text-sm font-semibold leading-tight">
-										{c.name}
-									</p>
+									<p className="truncate text-sm font-semibold leading-tight">{c.name}</p>
 									<p className="text-xs text-muted-foreground">@{c.username}</p>
 								</div>
-								<span
-									className={cn(
-										"shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider",
-										roleColor[c.role],
-									)}
-								>
+								<span className={cn("shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider", roleColor[c.role] ?? "bg-muted text-muted-foreground")}>
 									{c.role}
 								</span>
 								<div className="flex items-center gap-1">
 									<button
 										type="button"
-										onClick={() => {
-											setEditContact(c);
-											setContactDialog(true);
-										}}
+										onClick={() => { setEditContact(c); setContactDialog(true); }}
 										className="rounded-lg px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
 									>
 										Edit
@@ -246,23 +197,13 @@ function TelegramPage() {
 					</ul>
 				)}
 
-				<div className="mt-5 flex items-center justify-between">
-					<Button variant="outline" size="sm">
-						Test Connection
-					</Button>
-					<Button onClick={handleSave} className="gap-2">
-						{saved ? (
-							<>
-								<CheckCircle2 className="size-4" /> Saved
-							</>
-						) : (
-							"Save Config"
-						)}
+				<div className="mt-5 flex items-center justify-end">
+					<Button onClick={handleSave} disabled={saving} className="gap-2">
+						{saved ? <><CheckCircle2 className="size-4" /> Saved</> : saving ? "Saving…" : "Save Config"}
 					</Button>
 				</div>
 			</div>
 
-			{/* Notifications */}
 			<div className="rounded-3xl border bg-card p-6 shadow-sm">
 				<h3 className="mb-1 text-sm font-semibold">Notifications</h3>
 				<p className="mb-4 text-xs text-muted-foreground">
@@ -275,31 +216,17 @@ function TelegramPage() {
 				)}
 				<div className="space-y-3">
 					{notifs.map((n) => (
-						<div
-							key={n.key}
-							className={cn(
-								"rounded-2xl border p-4 transition-opacity",
-								!n.enabled && "opacity-50",
-							)}
-						>
+						<div key={n.key} className={cn("rounded-2xl border p-4 transition-opacity", !n.enabled && "opacity-50")}>
 							<div className="flex items-start justify-between gap-3">
 								<div className="min-w-0 flex-1">
 									<p className="text-sm font-semibold">{n.label}</p>
-									<p className="mt-0.5 text-xs text-muted-foreground">
-										{n.description}
-									</p>
+									<p className="mt-0.5 text-xs text-muted-foreground">{n.description}</p>
 								</div>
-								<Switch
-									checked={n.enabled}
-									onCheckedChange={() => toggleNotif(n.key)}
-								/>
+								<Switch checked={n.enabled} onCheckedChange={() => toggleNotif(n.key)} />
 							</div>
-
 							{n.enabled && contacts.length > 0 && (
 								<div className="mt-3 flex flex-wrap items-center gap-1.5">
-									<span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-										Notify:
-									</span>
+									<span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Notify:</span>
 									{contacts.map((c) => {
 										const active = n.recipients.includes(c.id);
 										return (
@@ -309,21 +236,11 @@ function TelegramPage() {
 												onClick={() => toggleRecipient(n.key, c.id)}
 												className={cn(
 													"flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold transition-all",
-													active
-														? roleColor[c.role]
-														: "bg-muted text-muted-foreground hover:text-foreground",
+													active ? roleColor[c.role] ?? "bg-muted text-muted-foreground" : "bg-muted text-muted-foreground hover:text-foreground",
 												)}
 											>
 												<span>@{c.username}</span>
-												{active && (
-													<span
-														className={cn(
-															"rounded-full px-1 py-0 text-[9px] font-bold uppercase opacity-60",
-														)}
-													>
-														{c.role}
-													</span>
-												)}
+												{active && <span className="rounded-full px-1 py-0 text-[9px] font-bold uppercase opacity-60">{c.role}</span>}
 											</button>
 										);
 									})}
@@ -334,34 +251,21 @@ function TelegramPage() {
 				</div>
 			</div>
 
-			{/* Bot commands reference */}
 			<div className="rounded-3xl border bg-card p-6 shadow-sm">
 				<h3 className="mb-4 text-sm font-semibold">Available Bot Commands</h3>
 				<div className="space-y-1.5">
 					{[
-						{ cmd: "/orders", desc: "List today's active orders", role: "Owner" as Role },
-						{ cmd: "/summary", desc: "Today's sales summary", role: "Owner" as Role },
-						{ cmd: "/weekly", desc: "Weekly revenue breakdown", role: "Owner" as Role },
-						{ cmd: "/pending", desc: "Orders awaiting action", role: "Owner" as Role },
-						{ cmd: "/kitchen", desc: "Current in-kitchen orders", role: "Chef" as Role },
-						{ cmd: "/ready [order_id]", desc: "Mark order as ready", role: "Chef" as Role },
+						{ cmd: "/orders", desc: "List today's active orders", role: "owner" },
+						{ cmd: "/summary", desc: "Today's sales summary", role: "owner" },
+						{ cmd: "/weekly", desc: "Weekly revenue breakdown", role: "owner" },
+						{ cmd: "/pending", desc: "Orders awaiting action", role: "owner" },
+						{ cmd: "/kitchen", desc: "Current in-kitchen orders", role: "chef" },
+						{ cmd: "/ready [order_id]", desc: "Mark order as ready", role: "chef" },
 					].map((c) => (
-						<div
-							key={c.cmd}
-							className="flex items-center gap-3 rounded-lg px-3 py-2"
-						>
-							<code className="shrink-0 rounded bg-muted px-2 py-0.5 font-mono text-xs">
-								{c.cmd}
-							</code>
-							<span className="flex-1 text-sm text-muted-foreground">
-								{c.desc}
-							</span>
-							<span
-								className={cn(
-									"rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
-									roleColor[c.role],
-								)}
-							>
+						<div key={c.cmd} className="flex items-center gap-3 rounded-lg px-3 py-2">
+							<code className="shrink-0 rounded bg-muted px-2 py-0.5 font-mono text-xs">{c.cmd}</code>
+							<span className="flex-1 text-sm text-muted-foreground">{c.desc}</span>
+							<span className={cn("rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider", roleColor[c.role] ?? "bg-muted text-muted-foreground")}>
 								{c.role}
 							</span>
 						</div>
@@ -372,10 +276,7 @@ function TelegramPage() {
 			<ContactDialog
 				open={contactDialog}
 				contact={editContact}
-				onClose={() => {
-					setContactDialog(false);
-					setEditContact(null);
-				}}
+				onClose={() => { setContactDialog(false); setEditContact(null); }}
 				onSave={saveContact}
 			/>
 		</div>
@@ -395,7 +296,7 @@ function ContactDialog({
 }) {
 	const [name, setName] = useState(contact?.name ?? "");
 	const [username, setUsername] = useState(contact?.username ?? "");
-	const [role, setRole] = useState<Role>(contact?.role ?? "Waiter");
+	const [role, setRole] = useState(contact?.role ?? "waiter");
 	const [chatId, setChatId] = useState(contact?.chatId ?? "");
 
 	const handleOpenChange = (v: boolean) => {
@@ -403,7 +304,7 @@ function ContactDialog({
 		else {
 			setName(contact?.name ?? "");
 			setUsername(contact?.username ?? "");
-			setRole(contact?.role ?? "Waiter");
+			setRole(contact?.role ?? "waiter");
 			setChatId(contact?.chatId ?? "");
 		}
 	};
@@ -422,19 +323,12 @@ function ContactDialog({
 				<div className="space-y-4 px-8 pb-8 pt-2">
 					<div className="space-y-1.5">
 						<Label htmlFor="ct-name">Full Name</Label>
-						<Input
-							id="ct-name"
-							value={name}
-							onChange={(e) => setName(e.target.value)}
-							placeholder="e.g. Dawit Mulugeta"
-						/>
+						<Input id="ct-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Dawit Mulugeta" />
 					</div>
 					<div className="space-y-1.5">
 						<Label htmlFor="ct-username">Telegram Username</Label>
 						<div className="relative">
-							<span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-								@
-							</span>
+							<span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">@</span>
 							<Input
 								id="ct-username"
 								value={username}
@@ -446,36 +340,25 @@ function ContactDialog({
 					</div>
 					<div className="space-y-1.5">
 						<Label>Role</Label>
-						<Select value={role} onValueChange={(v) => setRole(v as Role)}>
-							<SelectTrigger>
-								<SelectValue />
-							</SelectTrigger>
+						<Select value={role} onValueChange={setRole}>
+							<SelectTrigger><SelectValue /></SelectTrigger>
 							<SelectContent>
-								<SelectItem value="Owner">Owner</SelectItem>
-								<SelectItem value="Chef">Chef</SelectItem>
-								<SelectItem value="Waiter">Waiter</SelectItem>
+								<SelectItem value="owner">Owner</SelectItem>
+								<SelectItem value="chef">Chef</SelectItem>
+								<SelectItem value="waiter">Waiter</SelectItem>
 							</SelectContent>
 						</Select>
 					</div>
 					<div className="space-y-1.5">
 						<Label htmlFor="ct-chatid">Chat ID</Label>
-						<Input
-							id="ct-chatid"
-							value={chatId}
-							onChange={(e) => setChatId(e.target.value)}
-							placeholder="-100xxxxxxxxxx"
-						/>
+						<Input id="ct-chatid" value={chatId} onChange={(e) => setChatId(e.target.value)} placeholder="-100xxxxxxxxxx" />
 						<p className="text-xs text-muted-foreground">
 							Forward a message from this person to @userinfobot to get their chat ID.
 						</p>
 					</div>
 					<div className="flex gap-2 pt-1">
-						<Button variant="outline" onClick={onClose} className="flex-1">
-							Cancel
-						</Button>
-						<Button onClick={handleSave} className="flex-1">
-							{contact ? "Save Changes" : "Add Contact"}
-						</Button>
+						<Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
+						<Button onClick={handleSave} className="flex-1">{contact ? "Save Changes" : "Add Contact"}</Button>
 					</div>
 				</div>
 			</DialogContent>

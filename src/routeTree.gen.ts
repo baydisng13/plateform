@@ -9,171 +9,207 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as OrderRouteImport } from './routes/order'
-import { Route as NewOrderRouteImport } from './routes/new-order'
-import { Route as MenuRouteImport } from './routes/menu'
-import { Route as KitchenRouteImport } from './routes/kitchen'
-import { Route as ExpensesRouteImport } from './routes/expenses'
-import { Route as AnalyticsRouteImport } from './routes/analytics'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as SettingsTelegramRouteImport } from './routes/settings/telegram'
-import { Route as SettingsTablesRouteImport } from './routes/settings/tables'
-import { Route as SettingsStaffRouteImport } from './routes/settings/staff'
-import { Route as SettingsRestaurantRouteImport } from './routes/settings/restaurant'
-import { Route as SettingsOrderTypesRouteImport } from './routes/settings/order-types'
-import { Route as SettingsMenuTagsRouteImport } from './routes/settings/menu-tags'
-import { Route as SettingsExpenseCategoriesRouteImport } from './routes/settings/expense-categories'
-import { Route as SettingsCategoriesRouteImport } from './routes/settings/categories'
+import { Route as AuthRouteImport } from './routes/_auth'
+import { Route as AuthIndexRouteImport } from './routes/_auth/index'
+import { Route as AuthResetPasswordRouteImport } from './routes/auth/reset-password'
+import { Route as AuthLoginRouteImport } from './routes/auth/login'
+import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
+import { Route as AuthSettingsRouteImport } from './routes/_auth/settings'
+import { Route as AuthNewOrderRouteImport } from './routes/_auth/new-order'
+import { Route as AuthMenuRouteImport } from './routes/_auth/menu'
+import { Route as AuthKitchenRouteImport } from './routes/_auth/kitchen'
+import { Route as AuthExpensesRouteImport } from './routes/_auth/expenses'
+import { Route as AuthAnalyticsRouteImport } from './routes/_auth/analytics'
+import { Route as AuthSettingsTelegramRouteImport } from './routes/_auth/settings/telegram'
+import { Route as AuthSettingsTablesRouteImport } from './routes/_auth/settings/tables'
+import { Route as AuthSettingsStaffRouteImport } from './routes/_auth/settings/staff'
+import { Route as AuthSettingsRestaurantRouteImport } from './routes/_auth/settings/restaurant'
+import { Route as AuthSettingsOrderTypesRouteImport } from './routes/_auth/settings/order-types'
+import { Route as AuthSettingsMenuTagsRouteImport } from './routes/_auth/settings/menu-tags'
+import { Route as AuthSettingsExpenseCategoriesRouteImport } from './routes/_auth/settings/expense-categories'
+import { Route as AuthSettingsCategoriesRouteImport } from './routes/_auth/settings/categories'
 
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const OrderRoute = OrderRouteImport.update({
   id: '/order',
   path: '/order',
   getParentRoute: () => rootRouteImport,
 } as any)
-const NewOrderRoute = NewOrderRouteImport.update({
-  id: '/new-order',
-  path: '/new-order',
+const AuthRoute = AuthRouteImport.update({
+  id: '/_auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MenuRoute = MenuRouteImport.update({
-  id: '/menu',
-  path: '/menu',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const KitchenRoute = KitchenRouteImport.update({
-  id: '/kitchen',
-  path: '/kitchen',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ExpensesRoute = ExpensesRouteImport.update({
-  id: '/expenses',
-  path: '/expenses',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AnalyticsRoute = AnalyticsRouteImport.update({
-  id: '/analytics',
-  path: '/analytics',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const IndexRoute = IndexRouteImport.update({
+const AuthIndexRoute = AuthIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
+  id: '/auth/reset-password',
+  path: '/auth/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SettingsTelegramRoute = SettingsTelegramRouteImport.update({
+const AuthLoginRoute = AuthLoginRouteImport.update({
+  id: '/auth/login',
+  path: '/auth/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
+  id: '/auth/forgot-password',
+  path: '/auth/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthSettingsRoute = AuthSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthNewOrderRoute = AuthNewOrderRouteImport.update({
+  id: '/new-order',
+  path: '/new-order',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthMenuRoute = AuthMenuRouteImport.update({
+  id: '/menu',
+  path: '/menu',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthKitchenRoute = AuthKitchenRouteImport.update({
+  id: '/kitchen',
+  path: '/kitchen',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthExpensesRoute = AuthExpensesRouteImport.update({
+  id: '/expenses',
+  path: '/expenses',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthAnalyticsRoute = AuthAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthSettingsTelegramRoute = AuthSettingsTelegramRouteImport.update({
   id: '/telegram',
   path: '/telegram',
-  getParentRoute: () => SettingsRoute,
+  getParentRoute: () => AuthSettingsRoute,
 } as any)
-const SettingsTablesRoute = SettingsTablesRouteImport.update({
+const AuthSettingsTablesRoute = AuthSettingsTablesRouteImport.update({
   id: '/tables',
   path: '/tables',
-  getParentRoute: () => SettingsRoute,
+  getParentRoute: () => AuthSettingsRoute,
 } as any)
-const SettingsStaffRoute = SettingsStaffRouteImport.update({
+const AuthSettingsStaffRoute = AuthSettingsStaffRouteImport.update({
   id: '/staff',
   path: '/staff',
-  getParentRoute: () => SettingsRoute,
+  getParentRoute: () => AuthSettingsRoute,
 } as any)
-const SettingsRestaurantRoute = SettingsRestaurantRouteImport.update({
+const AuthSettingsRestaurantRoute = AuthSettingsRestaurantRouteImport.update({
   id: '/restaurant',
   path: '/restaurant',
-  getParentRoute: () => SettingsRoute,
+  getParentRoute: () => AuthSettingsRoute,
 } as any)
-const SettingsOrderTypesRoute = SettingsOrderTypesRouteImport.update({
+const AuthSettingsOrderTypesRoute = AuthSettingsOrderTypesRouteImport.update({
   id: '/order-types',
   path: '/order-types',
-  getParentRoute: () => SettingsRoute,
+  getParentRoute: () => AuthSettingsRoute,
 } as any)
-const SettingsMenuTagsRoute = SettingsMenuTagsRouteImport.update({
+const AuthSettingsMenuTagsRoute = AuthSettingsMenuTagsRouteImport.update({
   id: '/menu-tags',
   path: '/menu-tags',
-  getParentRoute: () => SettingsRoute,
+  getParentRoute: () => AuthSettingsRoute,
 } as any)
-const SettingsExpenseCategoriesRoute =
-  SettingsExpenseCategoriesRouteImport.update({
+const AuthSettingsExpenseCategoriesRoute =
+  AuthSettingsExpenseCategoriesRouteImport.update({
     id: '/expense-categories',
     path: '/expense-categories',
-    getParentRoute: () => SettingsRoute,
+    getParentRoute: () => AuthSettingsRoute,
   } as any)
-const SettingsCategoriesRoute = SettingsCategoriesRouteImport.update({
+const AuthSettingsCategoriesRoute = AuthSettingsCategoriesRouteImport.update({
   id: '/categories',
   path: '/categories',
-  getParentRoute: () => SettingsRoute,
+  getParentRoute: () => AuthSettingsRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/analytics': typeof AnalyticsRoute
-  '/expenses': typeof ExpensesRoute
-  '/kitchen': typeof KitchenRoute
-  '/menu': typeof MenuRoute
-  '/new-order': typeof NewOrderRoute
+  '/': typeof AuthIndexRoute
   '/order': typeof OrderRoute
-  '/settings': typeof SettingsRouteWithChildren
-  '/settings/categories': typeof SettingsCategoriesRoute
-  '/settings/expense-categories': typeof SettingsExpenseCategoriesRoute
-  '/settings/menu-tags': typeof SettingsMenuTagsRoute
-  '/settings/order-types': typeof SettingsOrderTypesRoute
-  '/settings/restaurant': typeof SettingsRestaurantRoute
-  '/settings/staff': typeof SettingsStaffRoute
-  '/settings/tables': typeof SettingsTablesRoute
-  '/settings/telegram': typeof SettingsTelegramRoute
+  '/analytics': typeof AuthAnalyticsRoute
+  '/expenses': typeof AuthExpensesRoute
+  '/kitchen': typeof AuthKitchenRoute
+  '/menu': typeof AuthMenuRoute
+  '/new-order': typeof AuthNewOrderRoute
+  '/settings': typeof AuthSettingsRouteWithChildren
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/settings/categories': typeof AuthSettingsCategoriesRoute
+  '/settings/expense-categories': typeof AuthSettingsExpenseCategoriesRoute
+  '/settings/menu-tags': typeof AuthSettingsMenuTagsRoute
+  '/settings/order-types': typeof AuthSettingsOrderTypesRoute
+  '/settings/restaurant': typeof AuthSettingsRestaurantRoute
+  '/settings/staff': typeof AuthSettingsStaffRoute
+  '/settings/tables': typeof AuthSettingsTablesRoute
+  '/settings/telegram': typeof AuthSettingsTelegramRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/analytics': typeof AnalyticsRoute
-  '/expenses': typeof ExpensesRoute
-  '/kitchen': typeof KitchenRoute
-  '/menu': typeof MenuRoute
-  '/new-order': typeof NewOrderRoute
   '/order': typeof OrderRoute
-  '/settings': typeof SettingsRouteWithChildren
-  '/settings/categories': typeof SettingsCategoriesRoute
-  '/settings/expense-categories': typeof SettingsExpenseCategoriesRoute
-  '/settings/menu-tags': typeof SettingsMenuTagsRoute
-  '/settings/order-types': typeof SettingsOrderTypesRoute
-  '/settings/restaurant': typeof SettingsRestaurantRoute
-  '/settings/staff': typeof SettingsStaffRoute
-  '/settings/tables': typeof SettingsTablesRoute
-  '/settings/telegram': typeof SettingsTelegramRoute
+  '/analytics': typeof AuthAnalyticsRoute
+  '/expenses': typeof AuthExpensesRoute
+  '/kitchen': typeof AuthKitchenRoute
+  '/menu': typeof AuthMenuRoute
+  '/new-order': typeof AuthNewOrderRoute
+  '/settings': typeof AuthSettingsRouteWithChildren
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/': typeof AuthIndexRoute
+  '/settings/categories': typeof AuthSettingsCategoriesRoute
+  '/settings/expense-categories': typeof AuthSettingsExpenseCategoriesRoute
+  '/settings/menu-tags': typeof AuthSettingsMenuTagsRoute
+  '/settings/order-types': typeof AuthSettingsOrderTypesRoute
+  '/settings/restaurant': typeof AuthSettingsRestaurantRoute
+  '/settings/staff': typeof AuthSettingsStaffRoute
+  '/settings/tables': typeof AuthSettingsTablesRoute
+  '/settings/telegram': typeof AuthSettingsTelegramRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/analytics': typeof AnalyticsRoute
-  '/expenses': typeof ExpensesRoute
-  '/kitchen': typeof KitchenRoute
-  '/menu': typeof MenuRoute
-  '/new-order': typeof NewOrderRoute
+  '/_auth': typeof AuthRouteWithChildren
   '/order': typeof OrderRoute
-  '/settings': typeof SettingsRouteWithChildren
-  '/settings/categories': typeof SettingsCategoriesRoute
-  '/settings/expense-categories': typeof SettingsExpenseCategoriesRoute
-  '/settings/menu-tags': typeof SettingsMenuTagsRoute
-  '/settings/order-types': typeof SettingsOrderTypesRoute
-  '/settings/restaurant': typeof SettingsRestaurantRoute
-  '/settings/staff': typeof SettingsStaffRoute
-  '/settings/tables': typeof SettingsTablesRoute
-  '/settings/telegram': typeof SettingsTelegramRoute
+  '/_auth/analytics': typeof AuthAnalyticsRoute
+  '/_auth/expenses': typeof AuthExpensesRoute
+  '/_auth/kitchen': typeof AuthKitchenRoute
+  '/_auth/menu': typeof AuthMenuRoute
+  '/_auth/new-order': typeof AuthNewOrderRoute
+  '/_auth/settings': typeof AuthSettingsRouteWithChildren
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/_auth/': typeof AuthIndexRoute
+  '/_auth/settings/categories': typeof AuthSettingsCategoriesRoute
+  '/_auth/settings/expense-categories': typeof AuthSettingsExpenseCategoriesRoute
+  '/_auth/settings/menu-tags': typeof AuthSettingsMenuTagsRoute
+  '/_auth/settings/order-types': typeof AuthSettingsOrderTypesRoute
+  '/_auth/settings/restaurant': typeof AuthSettingsRestaurantRoute
+  '/_auth/settings/staff': typeof AuthSettingsStaffRoute
+  '/_auth/settings/tables': typeof AuthSettingsTablesRoute
+  '/_auth/settings/telegram': typeof AuthSettingsTelegramRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/order'
     | '/analytics'
     | '/expenses'
     | '/kitchen'
     | '/menu'
     | '/new-order'
-    | '/order'
     | '/settings'
+    | '/auth/forgot-password'
+    | '/auth/login'
+    | '/auth/reset-password'
     | '/settings/categories'
     | '/settings/expense-categories'
     | '/settings/menu-tags'
@@ -184,14 +220,17 @@ export interface FileRouteTypes {
     | '/settings/telegram'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
+    | '/order'
     | '/analytics'
     | '/expenses'
     | '/kitchen'
     | '/menu'
     | '/new-order'
-    | '/order'
     | '/settings'
+    | '/auth/forgot-password'
+    | '/auth/login'
+    | '/auth/reset-password'
+    | '/'
     | '/settings/categories'
     | '/settings/expense-categories'
     | '/settings/menu-tags'
@@ -202,44 +241,38 @@ export interface FileRouteTypes {
     | '/settings/telegram'
   id:
     | '__root__'
-    | '/'
-    | '/analytics'
-    | '/expenses'
-    | '/kitchen'
-    | '/menu'
-    | '/new-order'
+    | '/_auth'
     | '/order'
-    | '/settings'
-    | '/settings/categories'
-    | '/settings/expense-categories'
-    | '/settings/menu-tags'
-    | '/settings/order-types'
-    | '/settings/restaurant'
-    | '/settings/staff'
-    | '/settings/tables'
-    | '/settings/telegram'
+    | '/_auth/analytics'
+    | '/_auth/expenses'
+    | '/_auth/kitchen'
+    | '/_auth/menu'
+    | '/_auth/new-order'
+    | '/_auth/settings'
+    | '/auth/forgot-password'
+    | '/auth/login'
+    | '/auth/reset-password'
+    | '/_auth/'
+    | '/_auth/settings/categories'
+    | '/_auth/settings/expense-categories'
+    | '/_auth/settings/menu-tags'
+    | '/_auth/settings/order-types'
+    | '/_auth/settings/restaurant'
+    | '/_auth/settings/staff'
+    | '/_auth/settings/tables'
+    | '/_auth/settings/telegram'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  AnalyticsRoute: typeof AnalyticsRoute
-  ExpensesRoute: typeof ExpensesRoute
-  KitchenRoute: typeof KitchenRoute
-  MenuRoute: typeof MenuRoute
-  NewOrderRoute: typeof NewOrderRoute
+  AuthRoute: typeof AuthRouteWithChildren
   OrderRoute: typeof OrderRoute
-  SettingsRoute: typeof SettingsRouteWithChildren
+  AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
+  AuthLoginRoute: typeof AuthLoginRoute
+  AuthResetPasswordRoute: typeof AuthResetPasswordRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/order': {
       id: '/order'
       path: '/order'
@@ -247,142 +280,196 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrderRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/new-order': {
-      id: '/new-order'
-      path: '/new-order'
-      fullPath: '/new-order'
-      preLoaderRoute: typeof NewOrderRouteImport
+    '/_auth': {
+      id: '/_auth'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/menu': {
-      id: '/menu'
-      path: '/menu'
-      fullPath: '/menu'
-      preLoaderRoute: typeof MenuRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/kitchen': {
-      id: '/kitchen'
-      path: '/kitchen'
-      fullPath: '/kitchen'
-      preLoaderRoute: typeof KitchenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/expenses': {
-      id: '/expenses'
-      path: '/expenses'
-      fullPath: '/expenses'
-      preLoaderRoute: typeof ExpensesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/analytics': {
-      id: '/analytics'
-      path: '/analytics'
-      fullPath: '/analytics'
-      preLoaderRoute: typeof AnalyticsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/': {
-      id: '/'
+    '/_auth/': {
+      id: '/_auth/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+      preLoaderRoute: typeof AuthIndexRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/auth/reset-password': {
+      id: '/auth/reset-password'
+      path: '/auth/reset-password'
+      fullPath: '/auth/reset-password'
+      preLoaderRoute: typeof AuthResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/settings/telegram': {
-      id: '/settings/telegram'
+    '/auth/login': {
+      id: '/auth/login'
+      path: '/auth/login'
+      fullPath: '/auth/login'
+      preLoaderRoute: typeof AuthLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/forgot-password': {
+      id: '/auth/forgot-password'
+      path: '/auth/forgot-password'
+      fullPath: '/auth/forgot-password'
+      preLoaderRoute: typeof AuthForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_auth/settings': {
+      id: '/_auth/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthSettingsRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/new-order': {
+      id: '/_auth/new-order'
+      path: '/new-order'
+      fullPath: '/new-order'
+      preLoaderRoute: typeof AuthNewOrderRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/menu': {
+      id: '/_auth/menu'
+      path: '/menu'
+      fullPath: '/menu'
+      preLoaderRoute: typeof AuthMenuRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/kitchen': {
+      id: '/_auth/kitchen'
+      path: '/kitchen'
+      fullPath: '/kitchen'
+      preLoaderRoute: typeof AuthKitchenRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/expenses': {
+      id: '/_auth/expenses'
+      path: '/expenses'
+      fullPath: '/expenses'
+      preLoaderRoute: typeof AuthExpensesRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/analytics': {
+      id: '/_auth/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AuthAnalyticsRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/settings/telegram': {
+      id: '/_auth/settings/telegram'
       path: '/telegram'
       fullPath: '/settings/telegram'
-      preLoaderRoute: typeof SettingsTelegramRouteImport
-      parentRoute: typeof SettingsRoute
+      preLoaderRoute: typeof AuthSettingsTelegramRouteImport
+      parentRoute: typeof AuthSettingsRoute
     }
-    '/settings/tables': {
-      id: '/settings/tables'
+    '/_auth/settings/tables': {
+      id: '/_auth/settings/tables'
       path: '/tables'
       fullPath: '/settings/tables'
-      preLoaderRoute: typeof SettingsTablesRouteImport
-      parentRoute: typeof SettingsRoute
+      preLoaderRoute: typeof AuthSettingsTablesRouteImport
+      parentRoute: typeof AuthSettingsRoute
     }
-    '/settings/staff': {
-      id: '/settings/staff'
+    '/_auth/settings/staff': {
+      id: '/_auth/settings/staff'
       path: '/staff'
       fullPath: '/settings/staff'
-      preLoaderRoute: typeof SettingsStaffRouteImport
-      parentRoute: typeof SettingsRoute
+      preLoaderRoute: typeof AuthSettingsStaffRouteImport
+      parentRoute: typeof AuthSettingsRoute
     }
-    '/settings/restaurant': {
-      id: '/settings/restaurant'
+    '/_auth/settings/restaurant': {
+      id: '/_auth/settings/restaurant'
       path: '/restaurant'
       fullPath: '/settings/restaurant'
-      preLoaderRoute: typeof SettingsRestaurantRouteImport
-      parentRoute: typeof SettingsRoute
+      preLoaderRoute: typeof AuthSettingsRestaurantRouteImport
+      parentRoute: typeof AuthSettingsRoute
     }
-    '/settings/order-types': {
-      id: '/settings/order-types'
+    '/_auth/settings/order-types': {
+      id: '/_auth/settings/order-types'
       path: '/order-types'
       fullPath: '/settings/order-types'
-      preLoaderRoute: typeof SettingsOrderTypesRouteImport
-      parentRoute: typeof SettingsRoute
+      preLoaderRoute: typeof AuthSettingsOrderTypesRouteImport
+      parentRoute: typeof AuthSettingsRoute
     }
-    '/settings/menu-tags': {
-      id: '/settings/menu-tags'
+    '/_auth/settings/menu-tags': {
+      id: '/_auth/settings/menu-tags'
       path: '/menu-tags'
       fullPath: '/settings/menu-tags'
-      preLoaderRoute: typeof SettingsMenuTagsRouteImport
-      parentRoute: typeof SettingsRoute
+      preLoaderRoute: typeof AuthSettingsMenuTagsRouteImport
+      parentRoute: typeof AuthSettingsRoute
     }
-    '/settings/expense-categories': {
-      id: '/settings/expense-categories'
+    '/_auth/settings/expense-categories': {
+      id: '/_auth/settings/expense-categories'
       path: '/expense-categories'
       fullPath: '/settings/expense-categories'
-      preLoaderRoute: typeof SettingsExpenseCategoriesRouteImport
-      parentRoute: typeof SettingsRoute
+      preLoaderRoute: typeof AuthSettingsExpenseCategoriesRouteImport
+      parentRoute: typeof AuthSettingsRoute
     }
-    '/settings/categories': {
-      id: '/settings/categories'
+    '/_auth/settings/categories': {
+      id: '/_auth/settings/categories'
       path: '/categories'
       fullPath: '/settings/categories'
-      preLoaderRoute: typeof SettingsCategoriesRouteImport
-      parentRoute: typeof SettingsRoute
+      preLoaderRoute: typeof AuthSettingsCategoriesRouteImport
+      parentRoute: typeof AuthSettingsRoute
     }
   }
 }
 
-interface SettingsRouteChildren {
-  SettingsCategoriesRoute: typeof SettingsCategoriesRoute
-  SettingsExpenseCategoriesRoute: typeof SettingsExpenseCategoriesRoute
-  SettingsMenuTagsRoute: typeof SettingsMenuTagsRoute
-  SettingsOrderTypesRoute: typeof SettingsOrderTypesRoute
-  SettingsRestaurantRoute: typeof SettingsRestaurantRoute
-  SettingsStaffRoute: typeof SettingsStaffRoute
-  SettingsTablesRoute: typeof SettingsTablesRoute
-  SettingsTelegramRoute: typeof SettingsTelegramRoute
+interface AuthSettingsRouteChildren {
+  AuthSettingsCategoriesRoute: typeof AuthSettingsCategoriesRoute
+  AuthSettingsExpenseCategoriesRoute: typeof AuthSettingsExpenseCategoriesRoute
+  AuthSettingsMenuTagsRoute: typeof AuthSettingsMenuTagsRoute
+  AuthSettingsOrderTypesRoute: typeof AuthSettingsOrderTypesRoute
+  AuthSettingsRestaurantRoute: typeof AuthSettingsRestaurantRoute
+  AuthSettingsStaffRoute: typeof AuthSettingsStaffRoute
+  AuthSettingsTablesRoute: typeof AuthSettingsTablesRoute
+  AuthSettingsTelegramRoute: typeof AuthSettingsTelegramRoute
 }
 
-const SettingsRouteChildren: SettingsRouteChildren = {
-  SettingsCategoriesRoute: SettingsCategoriesRoute,
-  SettingsExpenseCategoriesRoute: SettingsExpenseCategoriesRoute,
-  SettingsMenuTagsRoute: SettingsMenuTagsRoute,
-  SettingsOrderTypesRoute: SettingsOrderTypesRoute,
-  SettingsRestaurantRoute: SettingsRestaurantRoute,
-  SettingsStaffRoute: SettingsStaffRoute,
-  SettingsTablesRoute: SettingsTablesRoute,
-  SettingsTelegramRoute: SettingsTelegramRoute,
+const AuthSettingsRouteChildren: AuthSettingsRouteChildren = {
+  AuthSettingsCategoriesRoute: AuthSettingsCategoriesRoute,
+  AuthSettingsExpenseCategoriesRoute: AuthSettingsExpenseCategoriesRoute,
+  AuthSettingsMenuTagsRoute: AuthSettingsMenuTagsRoute,
+  AuthSettingsOrderTypesRoute: AuthSettingsOrderTypesRoute,
+  AuthSettingsRestaurantRoute: AuthSettingsRestaurantRoute,
+  AuthSettingsStaffRoute: AuthSettingsStaffRoute,
+  AuthSettingsTablesRoute: AuthSettingsTablesRoute,
+  AuthSettingsTelegramRoute: AuthSettingsTelegramRoute,
 }
 
-const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
-  SettingsRouteChildren,
+const AuthSettingsRouteWithChildren = AuthSettingsRoute._addFileChildren(
+  AuthSettingsRouteChildren,
 )
 
+interface AuthRouteChildren {
+  AuthAnalyticsRoute: typeof AuthAnalyticsRoute
+  AuthExpensesRoute: typeof AuthExpensesRoute
+  AuthKitchenRoute: typeof AuthKitchenRoute
+  AuthMenuRoute: typeof AuthMenuRoute
+  AuthNewOrderRoute: typeof AuthNewOrderRoute
+  AuthSettingsRoute: typeof AuthSettingsRouteWithChildren
+  AuthIndexRoute: typeof AuthIndexRoute
+}
+
+const AuthRouteChildren: AuthRouteChildren = {
+  AuthAnalyticsRoute: AuthAnalyticsRoute,
+  AuthExpensesRoute: AuthExpensesRoute,
+  AuthKitchenRoute: AuthKitchenRoute,
+  AuthMenuRoute: AuthMenuRoute,
+  AuthNewOrderRoute: AuthNewOrderRoute,
+  AuthSettingsRoute: AuthSettingsRouteWithChildren,
+  AuthIndexRoute: AuthIndexRoute,
+}
+
+const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  AnalyticsRoute: AnalyticsRoute,
-  ExpensesRoute: ExpensesRoute,
-  KitchenRoute: KitchenRoute,
-  MenuRoute: MenuRoute,
-  NewOrderRoute: NewOrderRoute,
+  AuthRoute: AuthRouteWithChildren,
   OrderRoute: OrderRoute,
-  SettingsRoute: SettingsRouteWithChildren,
+  AuthForgotPasswordRoute: AuthForgotPasswordRoute,
+  AuthLoginRoute: AuthLoginRoute,
+  AuthResetPasswordRoute: AuthResetPasswordRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

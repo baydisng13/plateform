@@ -3,7 +3,7 @@ import { Store, ToggleLeft, MessageSquare, Users, UtensilsCrossed, LayoutGrid, R
 import { AppShell, PageHeader } from "@/components/app-shell";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/settings")({
+export const Route = createFileRoute("/_auth/settings")({
 	beforeLoad: ({ location }) => {
 		if (location.pathname === "/settings" || location.pathname === "/settings/") {
 			throw redirect({ to: "/settings/restaurant" });
@@ -52,7 +52,7 @@ function SettingsLayout() {
 									<Icon className="size-4 shrink-0" strokeWidth={2} />
 									{item.label}
 								</Link>
-							);
+							)
 						})}
 					</nav>
 				</aside>
@@ -62,5 +62,5 @@ function SettingsLayout() {
 				</div>
 			</div>
 		</AppShell>
-	);
+	)
 }

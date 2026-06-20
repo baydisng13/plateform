@@ -9,15 +9,15 @@ import {
 import { Toaster } from "@/components/ui/sonner";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-import { OrdersProvider } from "@/lib/orders-store";
-import { TagsProvider } from "@/lib/tags-store";
+import type { Session } from "@/lib/auth";
 import appCss from "../styles.css?url";
 
-const SITE_TITLE = "Fresh & Pressed";
+const SITE_TITLE = "PlateForm";
 const SITE_DESCRIPTION = "Restaurant management system.";
 
 interface RouterContext {
 	queryClient: QueryClient;
+	session: Session | null;
 }
 
 export const Route = createRootRouteWithContext<RouterContext>()({
@@ -43,11 +43,7 @@ function RootLayout() {
 				<HeadContent />
 			</head>
 			<body>
-				<TagsProvider>
-					<OrdersProvider>
-						<Outlet />
-					</OrdersProvider>
-				</TagsProvider>
+				<Outlet />
 				<Toaster richColors position="top-right" />
 				<TanStackDevtools
 					config={{ position: "bottom-right" }}

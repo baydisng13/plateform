@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { Plus, Pencil, Trash2, GripVertical } from "lucide-react";
-import { menuCategories as initialCategories, type MenuCategory } from "@/lib/mock-data";
+import { getMenuCategories, createMenuCategory, updateMenuCategory, deleteMenuCategory } from "@/lib/server/menu";
 import {
 	Dialog,
 	DialogContent,
@@ -12,38 +12,36 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export const Route = createFileRoute("/settings/categories")({
-	head: () => ({ meta: [{ title: "Menu Categories — Fresh & Pressed" }] }),
+type DbCategory = Awaited<ReturnType<typeof getMenuCategories>>[number];
+
+export const Route = createFileRoute("/_auth/settings/categories")({
+	head: () => ({ meta: [{ title: "Menu Categories — PlateForm" }] }),
+	loader: () => getMenuCategories(),
 	component: CategoriesPage,
 });
 
 function CategoriesPage() {
-	const [categories, setCategories] =
-		useState<MenuCategory[]>(initialCategories);
+	const categories = Route.useLoaderData();
+	const router = useRouter();
 	const [dialogOpen, setDialogOpen] = useState(false);
-	const [editItem, setEditItem] = useState<MenuCategory | null>(null);
+	const [editItem, setEditItem] = useState<DbCategory | null>(null);
 
-	const openNew = () => {
-		setEditItem(null);
-		setDialogOpen(true);
-	};
-	const openEdit = (c: MenuCategory) => {
-		setEditItem(c);
-		setDialogOpen(true);
-	};
-	const deleteCategory = (id: string) =>
-		setCategories((arr) => arr.filter((c) => c.id !== id));
+	const openNew = () => { setEditItem(null); setDialogOpen(true); };
+	const openEdit = (c: DbCategory) => { setEditItem(c); setDialogOpen(true); };
 
-	const save = (name: string) => {
+	const handleDelete = async (id: string) => {
+		await deleteMenuCategory({ data: { id } });
+		router.invalidate();
+	};
+
+	const handleSave = async (name: string) => {
 		if (editItem) {
-			setCategories((arr) =>
-				arr.map((c) => (c.id === editItem.id ? { ...c, name } : c)),
-			);
+			await updateMenuCategory({ data: { id: editItem.id, name } });
 		} else {
-			const id = name.toLowerCase().replace(/\s+/g, "-");
-			setCategories((arr) => [...arr, { id, name }]);
+			await createMenuCategory({ data: { name } });
 		}
 		setDialogOpen(false);
+		router.invalidate();
 	};
 
 	return (
@@ -61,13 +59,11 @@ function CategoriesPage() {
 				</Button>
 			</div>
 
-			<div className="rounded-3xl border bg-card shadow-sm overflow-hidden">
+			<div className="overflow-hidden rounded-3xl border bg-card shadow-sm">
 				{categories.length === 0 ? (
 					<div className="flex flex-col items-center gap-2 py-16 text-center">
 						<p className="text-sm font-semibold">No categories yet</p>
-						<p className="text-xs text-muted-foreground">
-							Add categories to organise your menu items.
-						</p>
+						<p className="text-xs text-muted-foreground">Add categories to organise your menu items.</p>
 						<Button variant="outline" size="sm" className="mt-2" onClick={openNew}>
 							<Plus className="size-4" /> Add First Category
 						</Button>
@@ -75,14 +71,8 @@ function CategoriesPage() {
 				) : (
 					<ul>
 						{categories.map((c, idx) => (
-							<li
-								key={c.id}
-								className="flex items-center gap-3 border-b px-5 py-4 last:border-0"
-							>
-								<GripVertical
-									className="size-4 shrink-0 cursor-grab text-muted-foreground/40"
-									strokeWidth={2}
-								/>
+							<li key={c.id} className="flex items-center gap-3 border-b px-5 py-4 last:border-0">
+								<GripVertical className="size-4 shrink-0 cursor-grab text-muted-foreground/40" strokeWidth={2} />
 								<div className="grid size-8 shrink-0 place-items-center rounded-lg bg-muted text-xs font-bold tabular-nums text-muted-foreground">
 									{idx + 1}
 								</div>
@@ -98,7 +88,7 @@ function CategoriesPage() {
 									</button>
 									<button
 										type="button"
-										onClick={() => deleteCategory(c.id)}
+										onClick={() => handleDelete(c.id)}
 										className="grid size-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
 										aria-label={`Delete ${c.name}`}
 									>
@@ -115,7 +105,7 @@ function CategoriesPage() {
 				open={dialogOpen}
 				item={editItem}
 				onClose={() => setDialogOpen(false)}
-				onSave={save}
+				onSave={handleSave}
 			/>
 		</div>
 	);
@@ -128,24 +118,30 @@ function CategoryDialog({
 	onSave,
 }: {
 	open: boolean;
-	item: MenuCategory | null;
+	item: DbCategory | null;
 	onClose: () => void;
-	onSave: (name: string) => void;
+	onSave: (name: string) => Promise<void>;
 }) {
 	const [name, setName] = useState(item?.name ?? "");
+	const [saving, setSaving] = useState(false);
 
 	const handleOpenChange = (v: boolean) => {
 		if (!v) onClose();
 		else setName(item?.name ?? "");
 	};
 
+	const handleSave = async () => {
+		if (!name.trim()) return;
+		setSaving(true);
+		await onSave(name.trim());
+		setSaving(false);
+	};
+
 	return (
 		<Dialog open={open} onOpenChange={handleOpenChange}>
 			<DialogContent className="sm:max-w-sm">
 				<DialogHeader>
-					<DialogTitle>
-						{item ? "Edit Category" : "New Category"}
-					</DialogTitle>
+					<DialogTitle>{item ? "Edit Category" : "New Category"}</DialogTitle>
 				</DialogHeader>
 				<div className="space-y-4 px-8 pb-8 pt-2">
 					<div className="space-y-1.5">
@@ -159,14 +155,9 @@ function CategoryDialog({
 						/>
 					</div>
 					<div className="flex gap-2">
-						<Button variant="outline" onClick={onClose} className="flex-1">
-							Cancel
-						</Button>
-						<Button
-							onClick={() => name.trim() && onSave(name.trim())}
-							className="flex-1"
-						>
-							{item ? "Save" : "Add Category"}
+						<Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
+						<Button onClick={handleSave} disabled={saving} className="flex-1">
+							{saving ? "Saving…" : item ? "Save" : "Add Category"}
 						</Button>
 					</div>
 				</div>

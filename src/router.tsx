@@ -8,7 +8,7 @@ export const getRouter = () => {
 
 	const router = createRouter({
 		routeTree,
-		context: { ...rqContext },
+		context: { ...rqContext, session: null },
 		defaultPreload: "intent",
 		defaultNotFoundComponent: () => (
 			<div className="flex min-h-[40vh] items-center justify-center p-6">

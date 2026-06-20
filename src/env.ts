@@ -20,6 +20,16 @@ export const env = createEnv({
 		VITE_APP_URL: z.string().url().optional(),
 	},
 
-	runtimeEnv: import.meta.env,
+	runtimeEnv: {
+		SERVER_URL: process.env.SERVER_URL,
+		DATABASE_URL: process.env.DATABASE_URL,
+		RESEND_API_KEY: process.env.RESEND_API_KEY,
+		RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
+		BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
+		BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
+		ENCRYPTION_KEY: process.env.ENCRYPTION_KEY,
+		VITE_APP_TITLE: import.meta.env.VITE_APP_TITLE,
+		VITE_APP_URL: import.meta.env.VITE_APP_URL,
+	},
 	emptyStringAsUndefined: true,
 });

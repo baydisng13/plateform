@@ -8,6 +8,7 @@ import {
 	json,
 	pgEnum,
 } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
@@ -231,3 +232,13 @@ export const expenses = pgTable("expenses", {
 	createdBy: text("created_by").references(() => user.id),
 	createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+// ─── Relations ────────────────────────────────────────────────────────────────
+
+export const ordersRelations = relations(orders, ({ many }) => ({
+	items: many(orderItems),
+}));
+
+export const orderItemsRelations = relations(orderItems, ({ one }) => ({
+	order: one(orders, { fields: [orderItems.orderId], references: [orders.id] }),
+}));
