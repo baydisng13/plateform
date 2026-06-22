@@ -11,7 +11,12 @@ export default defineEventHandler(async (event) => {
 	}
 
 	const body = await readBody(event);
-	await handleWebhookUpdate(body);
+
+	try {
+		await handleWebhookUpdate(body);
+	} catch (err) {
+		console.error("[telegram webhook] handleWebhookUpdate error:", err);
+	}
 
 	return { ok: true };
 });
