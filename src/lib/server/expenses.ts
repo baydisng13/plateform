@@ -1,9 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { db } from "@/db";
 import { expenses } from "@/db/schema";
-import { eq, gte, lte, desc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { z } from "zod";
+import { requireOwner } from "./auth-utils";
 
 export const getExpenses = createServerFn({ method: "GET" })
 	.inputValidator(
@@ -14,6 +15,7 @@ export const getExpenses = createServerFn({ method: "GET" })
 		}).optional(),
 	)
 	.handler(async ({ data }) => {
+		await requireOwner();
 		return db.query.expenses.findMany({
 			where: (e, { and, gte, lte, eq }) => {
 				const conditions = [];
@@ -36,6 +38,7 @@ export const createExpense = createServerFn({ method: "POST" })
 		}),
 	)
 	.handler(async ({ data }) => {
+		const user = await requireOwner();
 		const [expense] = await db
 			.insert(expenses)
 			.values({
@@ -44,6 +47,7 @@ export const createExpense = createServerFn({ method: "POST" })
 				categoryId: data.categoryId,
 				description: data.description,
 				date: new Date(data.date),
+				createdBy: user.id,
 			})
 			.returning();
 		return expense;
@@ -52,5 +56,6 @@ export const createExpense = createServerFn({ method: "POST" })
 export const deleteExpense = createServerFn({ method: "POST" })
 	.inputValidator(z.object({ id: z.string() }))
 	.handler(async ({ data }) => {
+		await requireOwner();
 		await db.delete(expenses).where(eq(expenses.id, data.id));
 	});

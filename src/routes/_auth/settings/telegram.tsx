@@ -1,7 +1,7 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useState } from "react";
-import { MessageSquare, CheckCircle2, Trash2, UserPlus } from "lucide-react";
-import { getTelegramSettings, saveTelegramSettings } from "@/lib/server/settings";
+import { useState, useEffect } from "react";
+import { MessageSquare, CheckCircle2, Trash2, UserPlus, Link, RefreshCw, AlertCircle, Send } from "lucide-react";
+import { getTelegramSettings, saveTelegramSettings, registerTelegramWebhook, checkTelegramWebhook, sendTestMessage } from "@/lib/server/settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 
 type DbSettings = Awaited<ReturnType<typeof getTelegramSettings>>;
-type Contact = { id: string; name: string; username: string; role: string; chatId: string };
+type Contact = { id: string; name: string; role: string; chatId: string };
 
 export const Route = createFileRoute("/_auth/settings/telegram")({
 	head: () => ({ meta: [{ title: "Telegram — PlateForm" }] }),
@@ -63,6 +63,31 @@ function TelegramPage() {
 	const [saving, setSaving] = useState(false);
 	const [saved, setSaved] = useState(false);
 
+	type WebhookStatus = { url: string; pending_update_count: number; last_error_message?: string; last_error_date?: number } | null;
+	const [testingContact, setTestingContact] = useState<string | null>(null); // contact id being tested
+	const [testResults, setTestResults] = useState<Record<string, "ok" | "error" | string>>({}); // id → result
+
+	const handleTestMessage = async (contactId: string, chatId: string) => {
+		if (!chatId) {
+			setTestResults((r) => ({ ...r, [contactId]: "No chat ID set for this contact." }));
+			return;
+		}
+		setTestingContact(contactId);
+		try {
+			await sendTestMessage({ data: { chatId } });
+			setTestResults((r) => ({ ...r, [contactId]: "ok" }));
+		} catch (e) {
+			setTestResults((r) => ({ ...r, [contactId]: e instanceof Error ? e.message : "Failed" }));
+		} finally {
+			setTestingContact(null);
+		}
+	};
+
+	const [webhookStatus, setWebhookStatus] = useState<WebhookStatus | undefined>(undefined);
+	const [webhookLoading, setWebhookLoading] = useState<"register" | "check" | null>(null);
+	const [webhookError, setWebhookError] = useState<string | null>(null);
+	const [webhookSuccess, setWebhookSuccess] = useState<string | null>(null);
+
 	const toggleNotif = (key: string) =>
 		setNotifs((arr) => arr.map((n) => (n.key === key ? { ...n, enabled: !n.enabled } : n)));
 
@@ -88,6 +113,34 @@ function TelegramPage() {
 	const removeContact = (id: string) => {
 		setContacts((arr) => arr.filter((c) => c.id !== id));
 		setNotifs((arr) => arr.map((n) => ({ ...n, recipients: n.recipients.filter((r) => r !== id) })));
+	};
+
+	const handleRegisterWebhook = async () => {
+		setWebhookLoading("register");
+		setWebhookError(null);
+		setWebhookSuccess(null);
+		try {
+			const result = await registerTelegramWebhook({ data: undefined });
+			setWebhookSuccess(`✅ ${result.description}\n${result.webhookUrl}`);
+			await handleCheckWebhook();
+		} catch (e) {
+			setWebhookError(e instanceof Error ? e.message : "Unknown error");
+		} finally {
+			setWebhookLoading(null);
+		}
+	};
+
+	const handleCheckWebhook = async () => {
+		setWebhookLoading("check");
+		setWebhookError(null);
+		try {
+			const result = await checkTelegramWebhook({ data: undefined });
+			setWebhookStatus(result as WebhookStatus);
+		} catch (e) {
+			setWebhookError(e instanceof Error ? e.message : "Unknown error");
+		} finally {
+			setWebhookLoading(null);
+		}
 	};
 
 	const handleSave = async () => {
@@ -141,6 +194,98 @@ function TelegramPage() {
 				</div>
 			</div>
 
+			{/* Webhook registration */}
+			<div className="rounded-3xl border bg-card p-6 shadow-sm">
+				<div className="mb-4 flex items-center gap-2">
+					<Link className="size-4 text-primary" strokeWidth={2} />
+					<h3 className="text-sm font-semibold">Webhook</h3>
+				</div>
+
+				<p className="mb-4 text-sm text-muted-foreground">
+					Register your app URL with Telegram so the bot receives messages.
+					Requires a saved bot token.
+				</p>
+
+				<div className="mb-4 rounded-xl bg-muted px-4 py-2.5">
+					<p className="font-mono text-xs text-muted-foreground break-all">
+						{typeof window !== "undefined" ? `${window.location.origin}/api/telegram/webhook` : "/api/telegram/webhook"}
+					</p>
+				</div>
+
+				{webhookStatus !== undefined && (
+					<div className={cn(
+						"mb-4 rounded-xl border px-4 py-3 text-sm",
+						webhookStatus?.last_error_message
+							? "border-destructive/30 bg-destructive/5 text-destructive"
+							: webhookStatus?.url
+								? "border-primary/30 bg-primary/5 text-primary"
+								: "border-muted bg-muted/50 text-muted-foreground",
+					)}>
+						{webhookStatus?.url ? (
+							<div className="space-y-1">
+								<p className="font-semibold">✅ Webhook active</p>
+								<p className="font-mono text-xs break-all">{webhookStatus.url}</p>
+								{webhookStatus.pending_update_count > 0 && (
+									<p className="text-xs">{webhookStatus.pending_update_count} pending updates</p>
+								)}
+								{webhookStatus.last_error_message && (
+									<p className="flex items-start gap-1.5 text-xs text-destructive">
+										<AlertCircle className="mt-0.5 size-3 shrink-0" />
+										Last error: {webhookStatus.last_error_message}
+									</p>
+								)}
+							</div>
+						) : (
+							<p>⚠️ No webhook registered</p>
+						)}
+					</div>
+				)}
+
+				{webhookError && (
+					<div className="mb-4 flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+						<AlertCircle className="mt-0.5 size-4 shrink-0" />
+						<span>{webhookError}</span>
+					</div>
+				)}
+
+				{webhookSuccess && (
+					<div className="mb-4 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-primary whitespace-pre-line">
+						{webhookSuccess}
+					</div>
+				)}
+
+				<div className="flex gap-2">
+					<Button
+						onClick={handleRegisterWebhook}
+						disabled={webhookLoading !== null || !settings?.hasToken}
+						className="flex-1 gap-2"
+					>
+						{webhookLoading === "register" ? (
+							<><RefreshCw className="size-3.5 animate-spin" /> Registering…</>
+						) : (
+							<><Link className="size-3.5" /> Register Webhook</>
+						)}
+					</Button>
+					<Button
+						variant="outline"
+						onClick={handleCheckWebhook}
+						disabled={webhookLoading !== null || !settings?.hasToken}
+						className="gap-2"
+					>
+						{webhookLoading === "check" ? (
+							<RefreshCw className="size-3.5 animate-spin" />
+						) : (
+							<RefreshCw className="size-3.5" />
+						)}
+						Check Status
+					</Button>
+				</div>
+
+				{!settings?.hasToken && (
+					<p className="mt-2 text-center text-xs text-muted-foreground">Save a bot token first to register the webhook.</p>
+				)}
+			</div>
+
 			<div className="rounded-3xl border bg-card p-6 shadow-sm">
 				<div className="mb-4 flex items-start justify-between">
 					<div>
@@ -164,44 +309,67 @@ function TelegramPage() {
 				) : (
 					<ul className="space-y-2">
 						{contacts.map((c) => (
-							<li key={c.id} className="flex items-center gap-3 rounded-2xl border px-4 py-3">
-								<div className="grid size-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-emerald-200 to-emerald-400 text-xs font-bold text-white">
-									{c.name.charAt(0)}
+							<li key={c.id} className="rounded-2xl border px-4 py-3">
+								<div className="flex items-center gap-3">
+									<div className="grid size-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-emerald-200 to-emerald-400 text-xs font-bold text-white">
+										{c.name.charAt(0)}
+									</div>
+									<div className="min-w-0 flex-1">
+										<p className="truncate text-sm font-semibold leading-tight">{c.name}</p>
+										<p className="font-mono text-xs text-muted-foreground">{c.chatId || "no chat ID set"}</p>
+									</div>
+									<span className={cn("shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider", roleColor[c.role] ?? "bg-muted text-muted-foreground")}>
+										{c.role}
+									</span>
+									<div className="flex items-center gap-1">
+										<button
+											type="button"
+											onClick={() => handleTestMessage(c.id, c.chatId)}
+											disabled={testingContact === c.id || !settings?.hasToken}
+											className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40"
+											title={!settings?.hasToken ? "Save token first" : !c.chatId ? "Add chat ID first" : "Send test message"}
+										>
+											{testingContact === c.id ? (
+												<RefreshCw className="size-3 animate-spin" />
+											) : (
+												<Send className="size-3" />
+											)}
+											Test
+										</button>
+										<button
+											type="button"
+											onClick={() => { setEditContact(c); setContactDialog(true); }}
+											className="rounded-lg px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+										>
+											Edit
+										</button>
+										<button
+											type="button"
+											onClick={() => removeContact(c.id)}
+											className="grid size-7 place-items-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+											aria-label="Remove contact"
+										>
+											<Trash2 className="size-3.5" />
+										</button>
+									</div>
 								</div>
-								<div className="min-w-0 flex-1">
-									<p className="truncate text-sm font-semibold leading-tight">{c.name}</p>
-									<p className="text-xs text-muted-foreground">@{c.username}</p>
-								</div>
-								<span className={cn("shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider", roleColor[c.role] ?? "bg-muted text-muted-foreground")}>
-									{c.role}
-								</span>
-								<div className="flex items-center gap-1">
-									<button
-										type="button"
-										onClick={() => { setEditContact(c); setContactDialog(true); }}
-										className="rounded-lg px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
-									>
-										Edit
-									</button>
-									<button
-										type="button"
-										onClick={() => removeContact(c.id)}
-										className="grid size-7 place-items-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-										aria-label="Remove contact"
-									>
-										<Trash2 className="size-3.5" />
-									</button>
-								</div>
+								{testResults[c.id] && (
+									<p className={cn(
+										"mt-2 flex items-center gap-1.5 text-xs",
+										testResults[c.id] === "ok" ? "text-primary" : "text-destructive",
+									)}>
+										{testResults[c.id] === "ok" ? (
+											<><CheckCircle2 className="size-3" /> Message delivered.</>
+										) : (
+											<><AlertCircle className="size-3" /> {testResults[c.id]}</>
+										)}
+									</p>
+								)}
 							</li>
 						))}
 					</ul>
 				)}
 
-				<div className="mt-5 flex items-center justify-end">
-					<Button onClick={handleSave} disabled={saving} className="gap-2">
-						{saved ? <><CheckCircle2 className="size-4" /> Saved</> : saving ? "Saving…" : "Save Config"}
-					</Button>
-				</div>
 			</div>
 
 			<div className="rounded-3xl border bg-card p-6 shadow-sm">
@@ -239,7 +407,7 @@ function TelegramPage() {
 													active ? roleColor[c.role] ?? "bg-muted text-muted-foreground" : "bg-muted text-muted-foreground hover:text-foreground",
 												)}
 											>
-												<span>@{c.username}</span>
+												<span>{c.name}</span>
 												{active && <span className="rounded-full px-1 py-0 text-[9px] font-bold uppercase opacity-60">{c.role}</span>}
 											</button>
 										);
@@ -261,6 +429,7 @@ function TelegramPage() {
 						{ cmd: "/pending", desc: "Orders awaiting action", role: "owner" },
 						{ cmd: "/kitchen", desc: "Current in-kitchen orders", role: "chef" },
 						{ cmd: "/ready [order_id]", desc: "Mark order as ready", role: "chef" },
+						{ cmd: "/myid", desc: "Get your Telegram chat ID", role: "anyone" },
 					].map((c) => (
 						<div key={c.cmd} className="flex items-center gap-3 rounded-lg px-3 py-2">
 							<code className="shrink-0 rounded bg-muted px-2 py-0.5 font-mono text-xs">{c.cmd}</code>
@@ -271,6 +440,12 @@ function TelegramPage() {
 						</div>
 					))}
 				</div>
+			</div>
+
+			<div className="flex items-center justify-end">
+				<Button onClick={handleSave} disabled={saving} className="gap-2">
+					{saved ? <><CheckCircle2 className="size-4" /> Saved</> : saving ? "Saving…" : "Save Settings"}
+				</Button>
 			</div>
 
 			<ContactDialog
@@ -295,23 +470,22 @@ function ContactDialog({
 	onSave: (data: Omit<Contact, "id">) => void;
 }) {
 	const [name, setName] = useState(contact?.name ?? "");
-	const [username, setUsername] = useState(contact?.username ?? "");
 	const [role, setRole] = useState(contact?.role ?? "waiter");
 	const [chatId, setChatId] = useState(contact?.chatId ?? "");
 
+	useEffect(() => {
+		setName(contact?.name ?? "");
+		setRole(contact?.role ?? "waiter");
+		setChatId(contact?.chatId ?? "");
+	}, [contact, open]);
+
 	const handleOpenChange = (v: boolean) => {
 		if (!v) onClose();
-		else {
-			setName(contact?.name ?? "");
-			setUsername(contact?.username ?? "");
-			setRole(contact?.role ?? "waiter");
-			setChatId(contact?.chatId ?? "");
-		}
 	};
 
 	const handleSave = () => {
-		if (!name.trim() || !username.trim()) return;
-		onSave({ name: name.trim(), username: username.trim().replace(/^@/, ""), role, chatId });
+		if (!name.trim()) return;
+		onSave({ name: name.trim(), role, chatId });
 	};
 
 	return (
@@ -322,21 +496,8 @@ function ContactDialog({
 				</DialogHeader>
 				<div className="space-y-4 px-8 pb-8 pt-2">
 					<div className="space-y-1.5">
-						<Label htmlFor="ct-name">Full Name</Label>
+						<Label htmlFor="ct-name">Name</Label>
 						<Input id="ct-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Dawit Mulugeta" />
-					</div>
-					<div className="space-y-1.5">
-						<Label htmlFor="ct-username">Telegram Username</Label>
-						<div className="relative">
-							<span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">@</span>
-							<Input
-								id="ct-username"
-								value={username}
-								onChange={(e) => setUsername(e.target.value.replace(/^@/, ""))}
-								placeholder="username"
-								className="pl-7"
-							/>
-						</div>
 					</div>
 					<div className="space-y-1.5">
 						<Label>Role</Label>
@@ -351,14 +512,17 @@ function ContactDialog({
 					</div>
 					<div className="space-y-1.5">
 						<Label htmlFor="ct-chatid">Chat ID</Label>
-						<Input id="ct-chatid" value={chatId} onChange={(e) => setChatId(e.target.value)} placeholder="-100xxxxxxxxxx" />
-						<p className="text-xs text-muted-foreground">
-							Forward a message from this person to @userinfobot to get their chat ID.
-						</p>
+						<Input id="ct-chatid" value={chatId} onChange={(e) => setChatId(e.target.value)} placeholder="e.g. 123456789" />
+						<div className="rounded-xl bg-muted px-3 py-2.5 text-xs text-muted-foreground space-y-1">
+							<p className="font-semibold text-foreground">How to get your Chat ID:</p>
+							<p>1. Open Telegram and message the bot.</p>
+							<p>2. Send <code className="rounded bg-background px-1 font-mono">/myid</code> — the bot replies with your chat ID.</p>
+							<p>3. Paste the number here.</p>
+						</div>
 					</div>
 					<div className="flex gap-2 pt-1">
 						<Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
-						<Button onClick={handleSave} className="flex-1">{contact ? "Save Changes" : "Add Contact"}</Button>
+						<Button onClick={handleSave} disabled={!name.trim()} className="flex-1">{contact ? "Save Changes" : "Add Contact"}</Button>
 					</div>
 				</div>
 			</DialogContent>

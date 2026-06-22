@@ -119,7 +119,7 @@ export const telegramSettings = pgTable("telegram_settings", {
 	chefChatIds: json("chef_chat_ids").$type<string[]>().default([]),
 	waiterChatIds: json("waiter_chat_ids").$type<string[]>().default([]),
 	contacts: json("contacts").$type<
-		Array<{ id: string; name: string; username: string; role: string; chatId: string }>
+		Array<{ id: string; name: string; role: string; chatId: string }>
 	>().default([]),
 	updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

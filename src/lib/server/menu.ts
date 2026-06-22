@@ -4,6 +4,7 @@ import { menuItems, menuCategories, menuTags } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { z } from "zod";
+import { requireOwner } from "./auth-utils";
 
 export const getMenuItems = createServerFn({ method: "GET" }).handler(async () => {
 	return db.select().from(menuItems).orderBy(menuItems.createdAt);
@@ -31,6 +32,7 @@ const menuItemSchema = z.object({
 export const createMenuItem = createServerFn({ method: "POST" })
 	.inputValidator(menuItemSchema)
 	.handler(async ({ data }) => {
+		await requireOwner();
 		const [item] = await db
 			.insert(menuItems)
 			.values({ ...data, id: nanoid(), tagIds: data.tagIds ?? [] })
@@ -41,6 +43,7 @@ export const createMenuItem = createServerFn({ method: "POST" })
 export const updateMenuItem = createServerFn({ method: "POST" })
 	.inputValidator(menuItemSchema.extend({ id: z.string() }))
 	.handler(async ({ data: { id, ...rest } }) => {
+		await requireOwner();
 		const [item] = await db
 			.update(menuItems)
 			.set({ ...rest, updatedAt: new Date() })
@@ -52,12 +55,14 @@ export const updateMenuItem = createServerFn({ method: "POST" })
 export const deleteMenuItem = createServerFn({ method: "POST" })
 	.inputValidator(z.object({ id: z.string() }))
 	.handler(async ({ data }) => {
+		await requireOwner();
 		await db.delete(menuItems).where(eq(menuItems.id, data.id));
 	});
 
 export const toggleMenuItemAvailability = createServerFn({ method: "POST" })
 	.inputValidator(z.object({ id: z.string(), available: z.boolean() }))
 	.handler(async ({ data }) => {
+		await requireOwner();
 		const [item] = await db
 			.update(menuItems)
 			.set({ available: data.available, updatedAt: new Date() })
@@ -72,6 +77,7 @@ const categorySchema = z.object({ name: z.string().min(1) });
 export const createMenuCategory = createServerFn({ method: "POST" })
 	.inputValidator(categorySchema)
 	.handler(async ({ data }) => {
+		await requireOwner();
 		const [cat] = await db
 			.insert(menuCategories)
 			.values({ id: nanoid(), name: data.name })
@@ -82,6 +88,7 @@ export const createMenuCategory = createServerFn({ method: "POST" })
 export const updateMenuCategory = createServerFn({ method: "POST" })
 	.inputValidator(categorySchema.extend({ id: z.string() }))
 	.handler(async ({ data: { id, ...rest } }) => {
+		await requireOwner();
 		const [cat] = await db
 			.update(menuCategories)
 			.set(rest)
@@ -93,6 +100,7 @@ export const updateMenuCategory = createServerFn({ method: "POST" })
 export const deleteMenuCategory = createServerFn({ method: "POST" })
 	.inputValidator(z.object({ id: z.string() }))
 	.handler(async ({ data }) => {
+		await requireOwner();
 		await db.delete(menuCategories).where(eq(menuCategories.id, data.id));
 	});
 
@@ -102,6 +110,7 @@ const tagSchema = z.object({ name: z.string().min(1), color: z.string(), isDefau
 export const createMenuTag = createServerFn({ method: "POST" })
 	.inputValidator(tagSchema)
 	.handler(async ({ data }) => {
+		await requireOwner();
 		const [tag] = await db
 			.insert(menuTags)
 			.values({ id: nanoid(), name: data.name, color: data.color, isDefault: data.isDefault ?? false })
@@ -112,6 +121,7 @@ export const createMenuTag = createServerFn({ method: "POST" })
 export const updateMenuTag = createServerFn({ method: "POST" })
 	.inputValidator(tagSchema.extend({ id: z.string() }))
 	.handler(async ({ data: { id, ...rest } }) => {
+		await requireOwner();
 		const [tag] = await db
 			.update(menuTags)
 			.set(rest)
@@ -123,5 +133,6 @@ export const updateMenuTag = createServerFn({ method: "POST" })
 export const deleteMenuTag = createServerFn({ method: "POST" })
 	.inputValidator(z.object({ id: z.string() }))
 	.handler(async ({ data }) => {
+		await requireOwner();
 		await db.delete(menuTags).where(eq(menuTags.id, data.id));
 	});

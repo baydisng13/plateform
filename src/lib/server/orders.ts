@@ -4,7 +4,8 @@ import { orders, orderItems, payments, expenses } from "@/db/schema";
 import { eq, desc, and, gte, lt } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { z } from "zod";
-import { sendTelegramNotification } from "./telegram";
+import { sendTelegramNotification, sendToOwner, sendToWaiters } from "./telegram";
+import { requireAuth, requireOwner, requireRole } from "./auth-utils";
 
 const orderLineSchema = z.object({
 	menuItemId: z.string().optional(),
@@ -14,6 +15,7 @@ const orderLineSchema = z.object({
 });
 
 export const getActiveOrders = createServerFn({ method: "GET" }).handler(async () => {
+	await requireAuth();
 	const rows = await db.query.orders.findMany({
 		where: (o, { ne }) => ne(o.status, "completed"),
 		with: { items: true },
@@ -25,12 +27,14 @@ export const getActiveOrders = createServerFn({ method: "GET" }).handler(async (
 export const getOrderById = createServerFn({ method: "GET" })
 	.inputValidator(z.object({ id: z.string() }))
 	.handler(async ({ data }) => {
+		await requireAuth();
 		return db.query.orders.findFirst({
 			where: eq(orders.id, data.id),
 			with: { items: true },
 		});
 	});
 
+// No auth — also used by public /order page (online customers)
 export const createOrder = createServerFn({ method: "POST" })
 	.inputValidator(
 		z.object({
@@ -66,11 +70,14 @@ export const createOrder = createServerFn({ method: "POST" })
 			with: { items: true },
 		});
 
-		await sendTelegramNotification(
-			status === "awaiting"
-				? `📱 New online order #${id.slice(-4)}\nPhone: ${data.customerPhone ?? "—"}\nItems: ${items.map((i) => `${i.quantity}× ${i.name}`).join(", ")}`
-				: `🆕 New order #${id.slice(-4)} (${data.type})\nItems: ${items.map((i) => `${i.quantity}× ${i.name}`).join(", ")}`,
-		);
+		const itemSummary = items.map((i) => `${i.quantity}× ${i.name}`).join(", ");
+		if (status === "awaiting") {
+			// Online order — owner only needs to call customer to confirm
+			await sendToOwner(`📱 New online order #${id.slice(-4)} — needs confirmation\nPhone: ${data.customerPhone ?? "—"}\nItems: ${itemSummary}`);
+		} else {
+			// Staff-created order — notify owner + chef
+			await sendTelegramNotification(`🆕 New order #${id.slice(-4)} (${data.type})\nItems: ${itemSummary}`);
+		}
 
 		return order;
 	});
@@ -84,6 +91,7 @@ export const updateOrderStatus = createServerFn({ method: "POST" })
 		}),
 	)
 	.handler(async ({ data }) => {
+		await requireAuth();
 		const kitchenUpdate =
 			data.status === "in_kitchen"
 				? await db
@@ -104,7 +112,9 @@ export const updateOrderStatus = createServerFn({ method: "POST" })
 			.returning();
 
 		if (data.status === "ready") {
-			await sendTelegramNotification(`✅ Order #${data.id.slice(-4)} is ready for pickup/delivery`);
+			// Notify waiters to pick up + owner for awareness
+			const msg = `✅ Order #${data.id.slice(-4)} is ready for pickup/delivery`;
+			await Promise.all([sendToWaiters(msg), sendToOwner(msg)]);
 		}
 
 		return order;
@@ -113,6 +123,7 @@ export const updateOrderStatus = createServerFn({ method: "POST" })
 export const deleteOrder = createServerFn({ method: "POST" })
 	.inputValidator(z.object({ id: z.string() }))
 	.handler(async ({ data }) => {
+		await requireOwner();
 		await db.delete(orders).where(eq(orders.id, data.id));
 	});
 
@@ -124,6 +135,7 @@ export const appendOrderItems = createServerFn({ method: "POST" })
 		}),
 	)
 	.handler(async ({ data }) => {
+		await requireRole("owner", "waiter");
 		await db.insert(orderItems).values(
 			data.items.map((i) => ({
 				id: nanoid(),
@@ -145,6 +157,7 @@ export const updateItemKitchenStatus = createServerFn({ method: "POST" })
 		}),
 	)
 	.handler(async ({ data }) => {
+		await requireRole("owner", "chef");
 		await db
 			.update(orderItems)
 			.set({ kitchenStatus: data.kitchenStatus })
@@ -163,20 +176,20 @@ export const confirmPayment = createServerFn({ method: "POST" })
 		}),
 	)
 	.handler(async ({ data }) => {
+		const user = await requireRole("owner", "waiter");
 		const { orderId, ...paymentData } = data;
-		await db.insert(payments).values({ id: nanoid(), orderId, ...paymentData });
+		await db.insert(payments).values({ id: nanoid(), orderId, confirmedBy: user.id, ...paymentData });
 		await db
 			.update(orders)
 			.set({ status: "completed", updatedAt: new Date() })
 			.where(eq(orders.id, orderId));
 
-		await sendTelegramNotification(
-			`💰 Payment confirmed for order #${orderId.slice(-4)} — ${data.method.toUpperCase()}`,
-		);
+		await sendToOwner(`💰 Payment confirmed for order #${orderId.slice(-4)} — ${data.method.toUpperCase()}`);
 	});
 
 // Analytics
 export const getDailyStats = createServerFn({ method: "GET" }).handler(async () => {
+	await requireOwner();
 	const today = new Date();
 	today.setHours(0, 0, 0, 0);
 	const tomorrow = new Date(today);

@@ -10,7 +10,7 @@ export const env = createEnv({
 		BETTER_AUTH_SECRET: z.string().min(32),
 		BETTER_AUTH_URL: z.string().url(),
 		ENCRYPTION_KEY: z.string().length(64),
-
+		TELEGRAM_WEBHOOK_SECRET: z.string().optional(),
 	},
 
 	clientPrefix: "VITE_",
@@ -28,6 +28,7 @@ export const env = createEnv({
 		BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
 		BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
 		ENCRYPTION_KEY: process.env.ENCRYPTION_KEY,
+		TELEGRAM_WEBHOOK_SECRET: process.env.TELEGRAM_WEBHOOK_SECRET,
 		VITE_APP_TITLE: import.meta.env.VITE_APP_TITLE,
 		VITE_APP_URL: import.meta.env.VITE_APP_URL,
 	},
