@@ -346,14 +346,17 @@ function registerCommands(bot: Bot) {
 // ─── Webhook entry point ──────────────────────────────────────────────────────
 
 export async function handleWebhookUpdate(update: unknown): Promise<void> {
+	console.log("[telegram] handleWebhookUpdate called, update type:", (update as any)?.message ? "message" : JSON.stringify(Object.keys((update as any) ?? {})));
 	try {
 		const bot = await getBot();
 		if (!bot) {
 			console.error("[telegram] handleWebhookUpdate: no bot (missing token?)");
 			return;
 		}
+		console.log("[telegram] bot obtained, calling handleUpdate");
 		// biome-ignore lint/suspicious/noExplicitAny: grammy expects Update type
 		await bot.handleUpdate(update as any);
+		console.log("[telegram] handleUpdate completed");
 	} catch (err) {
 		console.error("[telegram] handleWebhookUpdate error:", err);
 	}
