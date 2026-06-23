@@ -21,6 +21,7 @@ export function MenuPosCard({
 	return (
 		<button
 			type="button"
+			data-testid="menu-pos-card"
 			onClick={() => available && onClick()}
 			disabled={!available}
 			className={cn(

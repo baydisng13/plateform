@@ -12,3 +12,6 @@ count.txt
 .vinxi
 todos.json
 .vercel
+/tests/e2e/.auth/user.json
+/playwright-report
+/test-results

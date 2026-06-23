@@ -28,7 +28,7 @@ export function MenuManageCard({
 	onToggle,
 }: MenuManageCardProps) {
 	return (
-		<article className="group relative flex flex-col rounded-2xl border shadow-sm">
+		<article data-testid="menu-manage-card" className="group relative flex flex-col rounded-2xl border shadow-sm">
 			{/* Header */}
 			<div
 				className={cn(
