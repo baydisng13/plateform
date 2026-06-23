@@ -113,7 +113,7 @@ function KitchenPage() {
 				<div className="flex flex-1 gap-0 overflow-hidden">
 					<div className="flex-1 overflow-y-auto p-6">
 						{inKitchen.length === 0 ? (
-							<div className="grid h-full place-items-center">
+							<div data-testid="kitchen-empty" className="grid h-full place-items-center">
 								<div className="text-center">
 									<div className="mx-auto mb-4 grid size-16 place-items-center rounded-3xl bg-primary/10">
 										<ChefHat className="size-7 text-primary" />
@@ -136,6 +136,7 @@ function KitchenPage() {
 									return (
 										<article
 											key={t.id}
+											data-testid="kitchen-order-card"
 											className={cn(
 												"flex flex-col overflow-hidden rounded-3xl shadow-sm",
 												urgent

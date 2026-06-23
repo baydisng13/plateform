@@ -52,6 +52,7 @@ export function MenuManageCard({
 					<button
 						type="button"
 						onClick={onToggle}
+						data-testid="menu-toggle-btn"
 						title={available ? "Mark sold out" : "Mark available"}
 						className={cn(
 							"flex items-center gap-1 rounded-lg px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors",

@@ -28,7 +28,7 @@ test.describe("Settings navigation", () => {
 
 	test("can open add table dialog", async ({ page }) => {
 		await page.goto("/settings/tables");
-		await page.getByRole("button", { name: /add table/i }).click();
+		await page.getByRole("button", { name: /add table/i }).first().click();
 		await expect(page.getByRole("dialog")).toBeVisible();
 		await page.keyboard.press("Escape");
 	});
