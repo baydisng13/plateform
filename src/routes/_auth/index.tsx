@@ -176,7 +176,7 @@ function OrdersPage() {
 				subtitle={today}
 				right={
 					<>
-						<div className="flex rounded-xl bg-muted p-1">
+						<div className="hidden sm:flex rounded-xl bg-muted p-1">
 							{FILTERS.map((f) => (
 								<button
 									key={f.key}
@@ -196,17 +196,36 @@ function OrdersPage() {
 						<Button asChild size="sm">
 							<Link to="/new-order">
 								<Plus className="size-4" strokeWidth={2.5} />
-								New Order
+								<span className="hidden sm:inline">New Order</span>
 							</Link>
 						</Button>
 					</>
 				}
 			/>
 
+			{/* Mobile-only filter strip */}
+			<div className="sm:hidden flex gap-2 overflow-x-auto border-b bg-card px-4 py-2 shrink-0">
+				{FILTERS.map((f) => (
+					<button
+						key={f.key}
+						type="button"
+						onClick={() => setFilter(f.key)}
+						className={cn(
+							"shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition-all",
+							filter === f.key
+								? "bg-foreground text-background"
+								: "bg-muted text-muted-foreground",
+						)}
+					>
+						{f.label}
+					</button>
+				))}
+			</div>
+
 			<div className="flex flex-1 overflow-hidden">
-				<div className="flex-1 overflow-y-auto p-6">
+				<div className="flex-1 overflow-y-auto p-4 sm:p-6">
 					{awaitingOrders.length > 0 && (
-						<div className="mb-5 flex items-center justify-between gap-3 rounded-2xl border border-orange-200 bg-orange-50 px-5 py-3.5">
+						<div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3">
 							<div className="flex items-center gap-2">
 								<span className="size-2 animate-pulse rounded-full bg-orange-500" />
 								<p className="text-sm font-semibold text-orange-900">
@@ -221,7 +240,7 @@ function OrdersPage() {
 									className="border-destructive/30 text-destructive hover:bg-destructive hover:text-white"
 								>
 									<Trash2 className="size-3.5" />
-									Reject All
+									<span className="hidden sm:inline">Reject All</span>
 								</Button>
 								<Button
 									size="sm"
@@ -229,7 +248,7 @@ function OrdersPage() {
 									className="bg-orange-500 text-white hover:bg-orange-600"
 								>
 									<CheckCheck className="size-3.5" />
-									Confirm All
+									<span className="hidden sm:inline">Confirm All</span>
 								</Button>
 							</div>
 						</div>

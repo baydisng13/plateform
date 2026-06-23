@@ -92,16 +92,16 @@ function NewOrderPage() {
 	return (
 		<AppShell>
 			<PageHeader title="New Order" subtitle="Select items, set order type, confirm" />
-			<div className="flex flex-1 overflow-hidden">
+			<div className="flex flex-1 flex-col md:flex-row overflow-hidden">
 				<section className="flex flex-1 flex-col overflow-hidden">
-					<div className="flex items-center gap-3 border-b px-6 py-4">
+					<div className="flex items-center gap-3 border-b px-4 sm:px-6 py-4">
 						<div className="relative flex-1">
 							<Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
 							<Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search menu…" className="pl-10" />
 						</div>
 					</div>
 
-					<div className="flex gap-2 overflow-x-auto px-6 py-3">
+					<div className="flex gap-2 overflow-x-auto px-4 sm:px-6 py-3">
 						<CatChip active={cat === "all"} onClick={() => setCat("all")}>All</CatChip>
 						{menuCategories.map((c) => (
 							<CatChip key={c.id} active={cat === c.id} onClick={() => setCat(c.id)}>
@@ -110,7 +110,7 @@ function NewOrderPage() {
 						))}
 					</div>
 
-					<div className="grid flex-1 grid-cols-2 content-start gap-4 overflow-y-auto p-6 md:grid-cols-5">
+					<div className="grid flex-1 grid-cols-2 content-start gap-4 overflow-y-auto p-4 sm:p-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
 						{visible.map((m) => {
 							const cartQty = cart.find((x) => x.id === m.id)?.qty;
 							return (
@@ -128,15 +128,15 @@ function NewOrderPage() {
 					</div>
 				</section>
 
-				<aside className="flex w-[380px] shrink-0 flex-col border-l bg-card">
-					<div className="border-b px-6 py-5">
+				<aside className="flex w-full md:w-[380px] shrink-0 flex-col border-t md:border-t-0 md:border-l bg-card max-h-[45vh] md:max-h-none">
+					<div className="border-b px-4 sm:px-6 py-3 sm:py-5">
 						<h2 className="text-base font-semibold">Current Order</h2>
 						<p className="mt-0.5 text-xs text-muted-foreground">
 							{cart.length} {cart.length === 1 ? "item" : "items"}
 						</p>
 					</div>
 
-					<div className="border-b px-6 py-4">
+					<div className="border-b px-4 sm:px-6 py-3 sm:py-4">
 						<p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Order Type</p>
 						<div className="grid grid-cols-3 gap-2">
 							{(["dine_in", "takeaway", "delivery"] as OrderType[]).map((t) => (
@@ -191,7 +191,7 @@ function NewOrderPage() {
 						</div>
 					</div>
 
-					<div className="flex-1 overflow-y-auto px-6 py-4">
+					<div className="flex-1 overflow-y-auto px-4 sm:px-6 py-3 sm:py-4">
 						{cart.length === 0 ? (
 							<p className="py-8 text-center text-sm text-muted-foreground">Tap any item to add it.</p>
 						) : (
@@ -220,7 +220,7 @@ function NewOrderPage() {
 						)}
 					</div>
 
-					<div className="border-t bg-muted/40 px-6 py-4">
+					<div className="border-t bg-muted/40 px-4 sm:px-6 py-3 sm:py-4">
 						<div className="mb-4 space-y-1.5">
 							<Row label="Subtotal" value={formatETB(subtotal)} />
 							<Row label="Service fee" value="—" muted />

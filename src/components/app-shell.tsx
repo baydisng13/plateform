@@ -21,7 +21,7 @@ const nav: Array<{
 }> = [
 	{ to: "/", label: "Orders", icon: LayoutGrid, badge: 3 },
 	{ to: "/kitchen", label: "Kitchen", icon: ChefHat, badge: 2 },
-	{ to: "/new-order", label: "New Order", icon: Plus },
+	{ to: "/new-order", label: "New", icon: Plus },
 	{ to: "/menu", label: "Menu", icon: UtensilsCrossed },
 	{ to: "/expenses", label: "Expenses", icon: Receipt },
 	{ to: "/analytics", label: "Analytics", icon: BarChart3 },
@@ -32,11 +32,12 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 	return (
 		<div className="flex h-screen w-full overflow-hidden bg-background text-foreground">
-			<aside className="flex w-24 shrink-0 flex-col items-center border-r bg-card py-6">
+			{/* Desktop sidebar */}
+			<aside className="hidden md:flex w-24 shrink-0 flex-col items-center border-r bg-card py-6">
 				<Link
 					to="/"
 					className="mb-8 flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg"
-					aria-label="Fresh & Pressed home"
+					aria-label="PlateForm home"
 				>
 					<span className="text-xl font-bold">{restaurant.initial}</span>
 				</Link>
@@ -100,7 +101,71 @@ export function AppShell({ children }: { children: ReactNode }) {
 				</div>
 			</aside>
 
-			<main className="flex flex-1 flex-col overflow-hidden">{children}</main>
+			{/* Main content */}
+			<main className="flex flex-1 flex-col overflow-hidden pb-16 md:pb-0">
+				{children}
+			</main>
+
+			{/* Mobile bottom nav */}
+			<nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-around border-t bg-card px-1">
+				{nav.map((item) => {
+					const Icon = item.icon;
+					const active =
+						item.to === "/"
+							? pathname === "/"
+							: pathname.startsWith(item.to);
+					return (
+						<Link
+							key={item.to}
+							to={item.to}
+							className="relative flex flex-col items-center gap-0.5 px-2 py-1"
+						>
+							<div className="relative">
+								<Icon
+									className={cn(
+										"size-5",
+										active ? "text-primary" : "text-muted-foreground",
+									)}
+									strokeWidth={active ? 2.5 : 2}
+								/>
+								{item.badge ? (
+									<span className="absolute -right-1.5 -top-1.5 grid size-3.5 place-items-center rounded-full bg-orange-500 text-[8px] font-bold text-white">
+										{item.badge}
+									</span>
+								) : null}
+							</div>
+							<span
+								className={cn(
+									"text-[9px] font-semibold",
+									active ? "text-primary" : "text-muted-foreground",
+								)}
+							>
+								{item.label}
+							</span>
+						</Link>
+					);
+				})}
+				<Link
+					to="/settings"
+					className="flex flex-col items-center gap-0.5 px-2 py-1"
+				>
+					<Settings
+						className={cn(
+							"size-5",
+							pathname === "/settings" ? "text-primary" : "text-muted-foreground",
+						)}
+						strokeWidth={pathname === "/settings" ? 2.5 : 2}
+					/>
+					<span
+						className={cn(
+							"text-[9px] font-semibold",
+							pathname === "/settings" ? "text-primary" : "text-muted-foreground",
+						)}
+					>
+						Settings
+					</span>
+				</Link>
+			</nav>
 		</div>
 	);
 }
@@ -115,9 +180,9 @@ export function PageHeader({
 	right?: ReactNode;
 }) {
 	return (
-		<header className="flex h-20 shrink-0 items-center justify-between border-b bg-card/80 px-8 backdrop-blur-md">
+		<header className="flex h-16 sm:h-20 shrink-0 items-center justify-between border-b bg-card/80 px-4 sm:px-8 backdrop-blur-md">
 			<div className="min-w-0">
-				<h1 className="truncate text-xl font-semibold tracking-tight">
+				<h1 className="truncate text-lg sm:text-xl font-semibold tracking-tight">
 					{title}
 				</h1>
 				{subtitle ? (
@@ -126,13 +191,13 @@ export function PageHeader({
 					</p>
 				) : null}
 			</div>
-			<div className="flex items-center gap-3">
+			<div className="flex items-center gap-2 sm:gap-3">
 				<button
-					className="grid size-10 place-items-center rounded-xl bg-muted text-muted-foreground transition-colors hover:text-foreground active:scale-[0.97]"
+					className="grid size-9 sm:size-10 place-items-center rounded-xl bg-muted text-muted-foreground transition-colors hover:text-foreground active:scale-[0.97]"
 					aria-label="Notifications"
 					type="button"
 				>
-					<Bell className="size-5" strokeWidth={2} />
+					<Bell className="size-4 sm:size-5" strokeWidth={2} />
 				</button>
 				{right}
 			</div>

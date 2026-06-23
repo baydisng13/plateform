@@ -128,7 +128,7 @@ function MenuPage() {
 				}
 			/>
 			<div className="flex flex-1 overflow-hidden">
-				<aside className="w-56 shrink-0 border-r bg-card p-4">
+				<aside className="hidden md:block w-56 shrink-0 border-r bg-card p-4">
 					<p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
 						Categories
 					</p>
@@ -162,7 +162,37 @@ function MenuPage() {
 					})}
 				</aside>
 
-				<div className="grid flex-1 grid-cols-2 content-start gap-4 overflow-y-auto p-6 md:grid-cols-3 xl:grid-cols-5">
+				<div className="flex flex-1 flex-col overflow-hidden">
+				{/* Mobile category filter */}
+				<div className="md:hidden flex gap-2 overflow-x-auto border-b px-4 py-2 shrink-0">
+					<button
+						type="button"
+						onClick={() => setCat("all")}
+						className={cn(
+							"shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition-all",
+							cat === "all" ? "bg-foreground text-background" : "bg-muted text-muted-foreground",
+						)}
+					>
+						All ({items.length})
+					</button>
+					{categories.map((c) => {
+						const count = items.filter((x) => x.categoryId === c.id).length;
+						return (
+							<button
+								key={c.id}
+								type="button"
+								onClick={() => setCat(c.id)}
+								className={cn(
+									"shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition-all",
+									cat === c.id ? "bg-foreground text-background" : "bg-muted text-muted-foreground",
+								)}
+							>
+								{c.name} ({count})
+							</button>
+						);
+					})}
+				</div>
+				<div className="grid flex-1 grid-cols-2 content-start gap-4 overflow-y-auto p-4 sm:p-6 md:grid-cols-3 xl:grid-cols-5">
 					{visible.map((m) => {
 						const catName = categories.find((c) => c.id === m.categoryId)?.name ?? m.categoryId;
 						return (
@@ -181,6 +211,7 @@ function MenuPage() {
 							/>
 						);
 					})}
+				</div>
 				</div>
 			</div>
 
