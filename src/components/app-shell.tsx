@@ -13,23 +13,18 @@ import type { ReactNode } from "react";
 import { useRestaurant } from "@/lib/restaurant-context";
 import { cn } from "@/lib/utils";
 
-const nav: Array<{
-	to: string;
-	label: string;
-	icon: typeof LayoutGrid;
-	badge?: number;
-}> = [
-	{ to: "/", label: "Orders", icon: LayoutGrid, badge: 3 },
-	{ to: "/kitchen", label: "Kitchen", icon: ChefHat, badge: 2 },
-	{ to: "/new-order", label: "New", icon: Plus },
-	{ to: "/menu", label: "Menu", icon: UtensilsCrossed },
-	{ to: "/expenses", label: "Expenses", icon: Receipt },
-	{ to: "/analytics", label: "Analytics", icon: BarChart3 },
-];
-
 export function AppShell({ children }: { children: ReactNode }) {
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
-	const { initial } = useRestaurant();
+	const { initial, ordersCount, kitchenCount } = useRestaurant();
+
+	const nav = [
+		{ to: "/", label: "Orders", icon: LayoutGrid, badge: ordersCount > 0 ? ordersCount : undefined },
+		{ to: "/kitchen", label: "Kitchen", icon: ChefHat, badge: kitchenCount > 0 ? kitchenCount : undefined },
+		{ to: "/new-order", label: "New", icon: Plus },
+		{ to: "/menu", label: "Menu", icon: UtensilsCrossed },
+		{ to: "/expenses", label: "Expenses", icon: Receipt },
+		{ to: "/analytics", label: "Analytics", icon: BarChart3 },
+	];
 
 	return (
 		<div className="flex h-screen w-full overflow-hidden bg-background text-foreground">

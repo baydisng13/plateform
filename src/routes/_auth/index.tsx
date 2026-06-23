@@ -119,8 +119,11 @@ function OrdersPage() {
 		method: PaymentMethod,
 		amountReceived?: number,
 		tip?: number,
+		imageBase64?: string,
+		mimeType?: string,
+		qrData?: string,
 	) => {
-		await confirmPayment({ data: { orderId, method, amountReceived, tip } });
+		await confirmPayment({ data: { orderId, method, amountReceived, tip, imageBase64, mimeType, qrData } });
 		setPayOrder(null);
 		router.invalidate();
 	};
@@ -279,8 +282,8 @@ function OrdersPage() {
 					order={payOrder}
 					open
 					onClose={() => setPayOrder(null)}
-					onConfirm={(method, amountReceived, tip) =>
-						handlePayment(payOrder.id, method, amountReceived, tip)
+					onConfirm={(method, amountReceived, tip, imageBase64, mimeType, qrData) =>
+						handlePayment(payOrder.id, method, amountReceived, tip, imageBase64, mimeType, qrData)
 					}
 				/>
 			)}
@@ -716,10 +719,14 @@ function PaymentDialog({
 	order: DbOrder;
 	open: boolean;
 	onClose: () => void;
-	onConfirm: (method: PaymentMethod, amountReceived?: number, tip?: number) => void;
+	onConfirm: (method: PaymentMethod, amountReceived?: number, tip?: number, imageBase64?: string, mimeType?: string, qrData?: string) => void;
 }) {
 	const [method, setMethod] = useState<PaymentMethod>("cash");
 	const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+	const [imageBase64, setImageBase64] = useState<string | undefined>();
+	const [imageMimeType, setImageMimeType] = useState<string>("image/jpeg");
+	const [qrData, setQrData] = useState<string | undefined>();
+	const [scanning, setScanning] = useState(false);
 	const [amountReceived, setAmountReceived] = useState("");
 
 	const total = order.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
@@ -734,10 +741,49 @@ function PaymentDialog({
 		{ key: "boa", label: "BOA" },
 	];
 
-	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+	const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
 		if (!file) return;
 		setPhotoPreview(URL.createObjectURL(file));
+		setScanning(true);
+		setQrData(undefined);
+
+		// Read as base64
+		const base64 = await new Promise<string>((res) => {
+			const reader = new FileReader();
+			reader.onload = () => {
+				const dataUrl = reader.result as string;
+				res(dataUrl.split(",")[1] ?? "");
+			};
+			reader.readAsDataURL(file);
+		});
+		const mime = file.type || "image/jpeg";
+		setImageBase64(base64);
+		setImageMimeType(mime);
+
+		// Try QR scan
+		try {
+			const { default: jsQR } = await import("jsqr");
+			const bitmap = await createImageBitmap(file);
+			const canvas = document.createElement("canvas");
+			canvas.width = bitmap.width;
+			canvas.height = bitmap.height;
+			const ctx = canvas.getContext("2d")!;
+			ctx.drawImage(bitmap, 0, 0);
+			const imgData = ctx.getImageData(0, 0, bitmap.width, bitmap.height);
+			const code = jsQR(imgData.data, imgData.width, imgData.height);
+			if (code?.data) setQrData(code.data);
+		} catch {
+			// QR scan failed silently
+		} finally {
+			setScanning(false);
+		}
+	};
+
+	const clearPhoto = () => {
+		setPhotoPreview(null);
+		setImageBase64(undefined);
+		setQrData(undefined);
 	};
 
 	const isCash = method === "cash";
@@ -819,25 +865,39 @@ function PaymentDialog({
 						<div className="space-y-3">
 							<Label>Payment Proof</Label>
 							{photoPreview ? (
-								<div className="relative overflow-hidden rounded-xl border">
-									<img src={photoPreview} alt="Payment proof" className="w-full object-cover" style={{ maxHeight: 180 }} />
-									<button
-										type="button"
-										onClick={() => setPhotoPreview(null)}
-										className="absolute right-2 top-2 grid size-7 place-items-center rounded-full bg-background/80 text-foreground backdrop-blur-sm"
-									>
-										<X className="size-4" />
-									</button>
-									<div className="absolute bottom-2 right-2 flex gap-1.5">
-										<label className="flex cursor-pointer items-center gap-1 rounded-lg bg-background/80 px-2.5 py-1.5 text-xs font-semibold backdrop-blur-sm">
-											<input type="file" accept="image/*" capture="environment" className="sr-only" onChange={handleFileChange} />
-											<Camera className="size-3" /> Retake
-										</label>
-										<label className="flex cursor-pointer items-center gap-1 rounded-lg bg-background/80 px-2.5 py-1.5 text-xs font-semibold backdrop-blur-sm">
-											<input type="file" accept="image/*" className="sr-only" onChange={handleFileChange} />
-											<Upload className="size-3" /> Replace
-										</label>
+								<div className="space-y-2">
+									<div className="relative overflow-hidden rounded-xl border">
+										<img src={photoPreview} alt="Payment proof" className="w-full object-cover" style={{ maxHeight: 180 }} />
+										<button
+											type="button"
+											onClick={clearPhoto}
+											className="absolute right-2 top-2 grid size-7 place-items-center rounded-full bg-background/80 text-foreground backdrop-blur-sm"
+										>
+											<X className="size-4" />
+										</button>
+										<div className="absolute bottom-2 right-2 flex gap-1.5">
+											<label className="flex cursor-pointer items-center gap-1 rounded-lg bg-background/80 px-2.5 py-1.5 text-xs font-semibold backdrop-blur-sm">
+												<input type="file" accept="image/*" capture="environment" className="sr-only" onChange={handleFileChange} />
+												<Camera className="size-3" /> Retake
+											</label>
+											<label className="flex cursor-pointer items-center gap-1 rounded-lg bg-background/80 px-2.5 py-1.5 text-xs font-semibold backdrop-blur-sm">
+												<input type="file" accept="image/*" className="sr-only" onChange={handleFileChange} />
+												<Upload className="size-3" /> Replace
+											</label>
+										</div>
 									</div>
+									{scanning && (
+										<p className="text-center text-xs text-muted-foreground">Scanning for QR code…</p>
+									)}
+									{qrData && (
+										<div className="flex items-start gap-2 rounded-xl bg-primary/5 border border-primary/20 px-3 py-2">
+											<span className="text-base">🔲</span>
+											<div className="min-w-0 flex-1">
+												<p className="text-[10px] font-bold uppercase tracking-wider text-primary">QR Detected</p>
+												<p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">{qrData}</p>
+											</div>
+										</div>
+									)}
 								</div>
 							) : (
 								<div className="grid grid-cols-2 gap-2">
@@ -860,7 +920,7 @@ function PaymentDialog({
 						<Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
 						<Button
 							disabled={!canConfirm}
-							onClick={() => onConfirm(method, received > 0 ? received : undefined, tip > 0 ? tip : undefined)}
+							onClick={() => onConfirm(method, received > 0 ? received : undefined, tip > 0 ? tip : undefined, imageBase64, imageMimeType, qrData)}
 							className="flex-1"
 						>
 							Confirm Payment

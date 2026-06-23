@@ -1,10 +1,16 @@
 import { createServerFn } from "@tanstack/react-start";
 import { db } from "@/db";
 import { orders, orderItems, payments, expenses } from "@/db/schema";
-import { eq, desc, and, gte, lt } from "drizzle-orm";
+import { eq, desc, and, gte, lt, ne, count } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { z } from "zod";
-import { sendTelegramNotification, sendToOwner, sendToWaiters } from "./telegram";
+import {
+	sendTelegramNotification,
+	sendToOwner,
+	sendToWaiters,
+	uploadProofToTelegram,
+	sendPaymentConfirmedNotification,
+} from "./telegram";
 import { requireAuth, requireOwner, requireRole } from "./auth-utils";
 
 const orderLineSchema = z.object({
@@ -171,21 +177,51 @@ export const confirmPayment = createServerFn({ method: "POST" })
 			method: z.enum(["cash", "telebirr", "cbe", "boa"]),
 			amountReceived: z.number().optional(),
 			tip: z.number().optional(),
-			proofUrl: z.string().optional(),
 			transactionRef: z.string().optional(),
+			imageBase64: z.string().optional(),
+			mimeType: z.string().optional(),
+			qrData: z.string().optional(),
 		}),
 	)
 	.handler(async ({ data }) => {
 		const user = await requireRole("owner", "waiter");
-		const { orderId, ...paymentData } = data;
-		await db.insert(payments).values({ id: nanoid(), orderId, confirmedBy: user.id, ...paymentData });
+		const { orderId, imageBase64, mimeType, qrData, ...paymentData } = data;
+
+		let proofUrl: string | undefined;
+		if (imageBase64) {
+			try {
+				proofUrl = (await uploadProofToTelegram(imageBase64, mimeType ?? "image/jpeg")) ?? undefined;
+			} catch (e) {
+				console.error("[confirmPayment] Telegram upload failed:", e);
+			}
+		}
+
+		await db.insert(payments).values({ id: nanoid(), orderId, confirmedBy: user.id, ...paymentData, proofUrl });
 		await db
 			.update(orders)
 			.set({ status: "completed", updatedAt: new Date() })
 			.where(eq(orders.id, orderId));
 
-		await sendToOwner(`💰 Payment confirmed for order #${orderId.slice(-4)} — ${data.method.toUpperCase()}`);
+		await sendPaymentConfirmedNotification({
+			orderId,
+			method: data.method,
+			amountReceived: data.amountReceived,
+			qrData,
+			proofFileId: proofUrl,
+		});
 	});
+
+export const getNavCounts = createServerFn({ method: "GET" }).handler(async () => {
+	await requireAuth();
+	const [active, kitchen] = await Promise.all([
+		db.select({ c: count() }).from(orders).where(ne(orders.status, "completed")),
+		db.select({ c: count() }).from(orders).where(eq(orders.status, "in_kitchen")),
+	]);
+	return {
+		ordersCount: Number(active[0]?.c ?? 0),
+		kitchenCount: Number(kitchen[0]?.c ?? 0),
+	};
+});
 
 // Analytics
 export const getWeeklyStats = createServerFn({ method: "GET" }).handler(async () => {

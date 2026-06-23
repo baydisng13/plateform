@@ -404,3 +404,102 @@ export async function sendToWaiters(message: string): Promise<void> {
 		await send(await getChatIdsByRole("waiter"), message);
 	} catch {}
 }
+
+// ─── Photo helpers ────────────────────────────────────────────────────────────
+
+async function tgSendPhoto(token: string, chatId: number | string, fileId: string, caption?: string) {
+	const body: Record<string, unknown> = { chat_id: chatId, photo: fileId };
+	if (caption) { body.caption = caption; body.parse_mode = "Markdown"; }
+	const res = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(body),
+	});
+	const json = (await res.json()) as { ok: boolean; description?: string };
+	if (!json.ok) throw new Error(`Telegram sendPhoto failed: ${json.description}`);
+}
+
+/** Upload a base64-encoded image to the owner's Telegram chat, return the file_id */
+export async function uploadProofToTelegram(base64: string, mimeType: string): Promise<string | null> {
+	const token = await getToken();
+	if (!token) return null;
+	const ownerIds = await getChatIdsByRole("owner");
+	if (ownerIds.length === 0) return null;
+
+	const binary = Buffer.from(base64, "base64");
+	const form = new FormData();
+	form.append("chat_id", ownerIds[0]);
+	form.append("photo", new Blob([binary], { type: mimeType }), "proof.jpg");
+	form.append("disable_notification", "true");
+
+	const res = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+		method: "POST",
+		body: form,
+	});
+	const json = (await res.json()) as {
+		ok: boolean;
+		result?: { photo: Array<{ file_id: string; width: number }> };
+	};
+	if (!json.ok || !json.result) return null;
+
+	const photos = json.result.photo.slice().sort((a, b) => b.width - a.width);
+	return photos[0]?.file_id ?? null;
+}
+
+/** Send payment-confirmed notification with optional photo + QR data */
+export async function sendPaymentConfirmedNotification(params: {
+	orderId: string;
+	method: string;
+	amountReceived?: number;
+	qrData?: string;
+	proofFileId?: string;
+}): Promise<void> {
+	try {
+		const token = await getToken();
+		if (!token) return;
+
+		const [ownerIds, waiterIds] = await Promise.all([
+			getChatIdsByRole("owner"),
+			getChatIdsByRole("waiter"),
+		]);
+		const chatIds = [...new Set([...ownerIds, ...waiterIds])];
+		if (chatIds.length === 0) return;
+
+		const order = await db.query.orders.findFirst({
+			where: (o, { eq }) => eq(o.id, params.orderId),
+			with: { items: true },
+		});
+		if (!order) return;
+
+		const total = order.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
+		const methodLabel: Record<string, string> = {
+			cash: "Cash", telebirr: "Telebirr", cbe: "CBE Birr", boa: "BOA",
+		};
+		const location = order.tableNumber
+			? `Table ${order.tableNumber}`
+			: order.customerPhone ?? "Takeaway";
+
+		const lines = [
+			`💰 *Payment Confirmed*`,
+			`${location} — ${methodLabel[params.method] ?? params.method}`,
+			`Amount: ${etb(total)}`,
+		];
+		if (params.amountReceived && params.amountReceived !== total) {
+			lines.push(`Received: ${etb(params.amountReceived)}`);
+		}
+		if (params.qrData) {
+			lines.push(`\n🔲 QR: \`${params.qrData}\``);
+		}
+
+		const text = lines.join("\n");
+		await Promise.allSettled(
+			chatIds.map((id) =>
+				params.proofFileId
+					? tgSendPhoto(token, id, params.proofFileId, text)
+					: tgSend(token, id, text, "Markdown"),
+			),
+		);
+	} catch {
+		// best-effort
+	}
+}

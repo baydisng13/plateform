@@ -1,4 +1,4 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, useRouter, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/app-shell";
@@ -65,6 +65,7 @@ function ExpensesPage() {
 	const { expenses, categories } = Route.useLoaderData();
 	const { range } = Route.useSearch();
 	const router = useRouter();
+	const navigate = useNavigate({ from: Route.fullPath });
 	const [catFilter, setCatFilter] = useState<string>("all");
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
@@ -130,7 +131,7 @@ function ExpensesPage() {
 							<button
 								key={r.value}
 								type="button"
-								onClick={() => router.navigate({ search: { range: r.value } })}
+								onClick={() => navigate({ search: () => ({ range: r.value }) })}
 								className={cn(
 									"rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all",
 									range === r.value
