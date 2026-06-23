@@ -345,18 +345,58 @@ function registerCommands(bot: Bot) {
 
 // ─── Webhook entry point ──────────────────────────────────────────────────────
 
+async function tgSend(token: string, chatId: number | string, text: string, parseMode?: string) {
+	const body: Record<string, unknown> = { chat_id: chatId, text };
+	if (parseMode) body.parse_mode = parseMode;
+	const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(body),
+	});
+	const json = (await res.json()) as { ok: boolean; description?: string };
+	if (!json.ok) throw new Error(`Telegram sendMessage failed: ${json.description}`);
+}
+
 export async function handleWebhookUpdate(update: unknown): Promise<void> {
-	console.log("[telegram] handleWebhookUpdate called, update type:", (update as any)?.message ? "message" : JSON.stringify(Object.keys((update as any) ?? {})));
 	try {
-		const bot = await getBot();
-		if (!bot) {
-			console.error("[telegram] handleWebhookUpdate: no bot (missing token?)");
-			return;
+		const s = await getSettings();
+		if (!s?.botTokenEncrypted) return;
+		const token = decrypt(s.botTokenEncrypted);
+
+		// biome-ignore lint/suspicious/noExplicitAny: dynamic telegram update
+		const upd = update as any;
+		const msg = upd?.message;
+		if (!msg) return;
+
+		const chatId: number = msg.chat?.id;
+		const text: string = msg.text ?? "";
+		const cmd = text.split("@")[0].split(" ")[0]; // strip @botname and args
+
+		switch (cmd) {
+			case "/myid":
+				await tgSend(token, chatId, `Your chat ID is:\n\`${chatId}\`\n\nPaste this into PlateForm → Settings → Telegram → Contacts.`, "Markdown");
+				break;
+			case "/start":
+				await tgSend(token, chatId,
+					"👋 *PlateForm Bot*\n\nAvailable commands:\n" +
+					"/orders — Today's active orders\n" +
+					"/summary — Today's summary\n" +
+					"/weekly — Weekly revenue\n" +
+					"/pending — Awaiting action\n" +
+					"/kitchen — In-kitchen orders (chef)\n" +
+					"/ready [id] — Mark order ready (chef)\n" +
+					"/myid — Get your Telegram chat ID",
+					"Markdown",
+				);
+				break;
+			default: {
+				const bot = await getBot();
+				if (bot) {
+					// biome-ignore lint/suspicious/noExplicitAny: grammy expects Update type
+					await bot.handleUpdate(update as any);
+				}
+			}
 		}
-		console.log("[telegram] bot obtained, calling handleUpdate");
-		// biome-ignore lint/suspicious/noExplicitAny: grammy expects Update type
-		await bot.handleUpdate(update as any);
-		console.log("[telegram] handleUpdate completed");
 	} catch (err) {
 		console.error("[telegram] handleWebhookUpdate error:", err);
 	}
