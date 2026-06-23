@@ -1,7 +1,8 @@
 import { defineEventHandler, readBody, getHeader, createError } from "nitro/h3";
+import { handleWebhookUpdate } from "../../../../src/lib/server/telegram";
 
 export default defineEventHandler(async (event) => {
-	console.log("[telegram webhook] received request");
+	console.log("[telegram webhook] received");
 
 	const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
 	if (secret) {
@@ -12,13 +13,7 @@ export default defineEventHandler(async (event) => {
 	}
 
 	const body = await readBody(event);
-
-	try {
-		const { handleWebhookUpdate } = await import("../../../../src/lib/server/telegram");
-		await handleWebhookUpdate(body);
-	} catch (err) {
-		console.error("[telegram webhook] error:", err);
-	}
+	await handleWebhookUpdate(body);
 
 	return { ok: true };
 });
