@@ -29,8 +29,33 @@ function SettingsLayout() {
 	return (
 		<AppShell>
 			<PageHeader title="Settings" subtitle="Restaurant, staff and integrations" />
+
+			{/* Mobile: horizontal pill strip */}
+			<div className="md:hidden flex gap-2 overflow-x-auto border-b bg-card px-4 py-2 shrink-0">
+				{settingsNav.map((item) => {
+					const Icon = item.icon;
+					const active = pathname.startsWith(item.to);
+					return (
+						<Link
+							key={item.to}
+							to={item.to}
+							className={cn(
+								"flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-colors",
+								active
+									? "bg-foreground text-background"
+									: "bg-muted text-muted-foreground hover:text-foreground",
+							)}
+						>
+							<Icon className="size-3.5" strokeWidth={2} />
+							{item.label}
+						</Link>
+					);
+				})}
+			</div>
+
 			<div className="flex flex-1 overflow-hidden">
-				<aside className="w-56 shrink-0 border-r bg-card p-4">
+				{/* Desktop: sidebar */}
+				<aside className="hidden md:block w-56 shrink-0 border-r bg-card p-4">
 					<p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
 						Settings
 					</p>
@@ -52,7 +77,7 @@ function SettingsLayout() {
 									<Icon className="size-4 shrink-0" strokeWidth={2} />
 									{item.label}
 								</Link>
-							)
+							);
 						})}
 					</nav>
 				</aside>
@@ -62,5 +87,5 @@ function SettingsLayout() {
 				</div>
 			</div>
 		</AppShell>
-	)
+	);
 }
