@@ -3,6 +3,7 @@ import { useState, useMemo } from "react";
 import { Plus, Minus, Search, Trash2 } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/app-shell";
 import { getMenuItems, getMenuCategories } from "@/lib/server/menu";
+import { getTables } from "@/lib/server/settings";
 import { createOrder } from "@/lib/server/orders";
 import { MenuPosCard } from "@/components/menu-pos-card";
 import { Input } from "@/components/ui/input";
@@ -15,11 +16,12 @@ type OrderType = "dine_in" | "takeaway" | "delivery";
 export const Route = createFileRoute("/_auth/new-order")({
 	head: () => ({ meta: [{ title: "New Order — PlateForm" }] }),
 	loader: async () => {
-		const [menuItems, menuCategories] = await Promise.all([
+		const [menuItems, menuCategories, tables] = await Promise.all([
 			getMenuItems(),
 			getMenuCategories(),
+			getTables(),
 		]);
-		return { menuItems: menuItems.filter((m) => m.available), menuCategories };
+		return { menuItems: menuItems.filter((m) => m.available), menuCategories, tables };
 	},
 	component: NewOrderPage,
 });
@@ -32,13 +34,13 @@ interface CartLine {
 }
 
 function NewOrderPage() {
-	const { menuItems, menuCategories } = Route.useLoaderData();
+	const { menuItems, menuCategories, tables } = Route.useLoaderData();
 	const navigate = useNavigate();
 	const [cat, setCat] = useState<string>("all");
 	const [query, setQuery] = useState("");
 	const [cart, setCart] = useState<CartLine[]>([]);
 	const [type, setType] = useState<OrderType>("dine_in");
-	const [table, setTable] = useState<number>(1);
+	const [table, setTable] = useState<number>(tables[0]?.number ?? 1);
 	const [phone, setPhone] = useState("");
 	const [address, setAddress] = useState("");
 	const [notes, setNotes] = useState("");
@@ -160,17 +162,17 @@ function NewOrderPage() {
 									Table Number
 								</label>
 								<div className="mt-1.5 flex flex-wrap gap-1.5">
-									{[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+									{tables.map((t) => (
 										<button
-											key={n}
+											key={t.id}
 											type="button"
-											onClick={() => setTable(n)}
+											onClick={() => setTable(t.number)}
 											className={cn(
 												"grid size-9 place-items-center rounded-lg text-xs font-bold transition-all",
-												table === n ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground",
+												table === t.number ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground",
 											)}
 										>
-											{n}
+											{t.number}
 										</button>
 									))}
 								</div>
