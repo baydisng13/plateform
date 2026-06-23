@@ -1,39 +1,27 @@
 import { db } from "@/db";
 import { telegramSettings, orders, expenses } from "@/db/schema";
 import { decrypt } from "@/lib/encrypt";
-import { Bot, type Context } from "grammy";
 import { eq, desc, gte, and, lt } from "drizzle-orm";
 
-// ─── Bot singleton ────────────────────────────────────────────────────────────
-
-let _bot: Bot | null = null;
+// ─── Settings ─────────────────────────────────────────────────────────────────
 
 async function getSettings() {
 	const [s] = await db.select().from(telegramSettings).limit(1);
 	return s ?? null;
 }
 
-async function getBot(): Promise<Bot | null> {
-	try {
-		const s = await getSettings();
-		if (!s?.botTokenEncrypted) {
-			console.error("[telegram] getBot: no botTokenEncrypted in DB");
-			return null;
-		}
-		if (!_bot) {
-			const token = decrypt(s.botTokenEncrypted);
-			_bot = new Bot(token);
-			registerCommands(_bot);
-		}
-		return _bot;
-	} catch (err) {
-		console.error("[telegram] getBot error:", err);
-		return null;
-	}
+let _token: string | null = null;
+
+async function getToken(): Promise<string | null> {
+	if (_token) return _token;
+	const s = await getSettings();
+	if (!s?.botTokenEncrypted) return null;
+	_token = decrypt(s.botTokenEncrypted);
+	return _token;
 }
 
 export function resetBotCache(): void {
-	_bot = null;
+	_token = null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -80,13 +68,26 @@ function todayRange() {
 	return { start, end };
 }
 
+// ─── Telegram API ─────────────────────────────────────────────────────────────
+
+async function tgSend(token: string, chatId: number | string, text: string, parseMode?: string) {
+	const body: Record<string, unknown> = { chat_id: chatId, text };
+	if (parseMode) body.parse_mode = parseMode;
+	const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(body),
+	});
+	const json = (await res.json()) as { ok: boolean; description?: string };
+	if (!json.ok) throw new Error(`Telegram sendMessage failed: ${json.description}`);
+}
+
 // ─── Command handlers ─────────────────────────────────────────────────────────
 
-async function cmdOrders(ctx: Context) {
-	const chatId = ctx.msg?.chat.id.toString() ?? "";
-	const role = await getRoleForChat(chatId);
+async function cmdOrders(token: string, chatId: number) {
+	const role = await getRoleForChat(chatId.toString());
 	if (role !== "owner") {
-		await ctx.reply("⛔ This command is for owners only.");
+		await tgSend(token, chatId, "⛔ This command is for owners only.");
 		return;
 	}
 
@@ -99,7 +100,7 @@ async function cmdOrders(ctx: Context) {
 	});
 
 	if (rows.length === 0) {
-		await ctx.reply("📋 No active orders today.");
+		await tgSend(token, chatId, "📋 No active orders today.");
 		return;
 	}
 
@@ -108,16 +109,13 @@ async function cmdOrders(ctx: Context) {
 		return `#${o.id.slice(-4)} ${orderTypeBadge(o.type)} — ${statusBadge(o.status)}\n${o.items.map((i) => `  ${i.quantity}× ${i.name}`).join("\n")}\n  💰 ${etb(total)}`;
 	});
 
-	await ctx.reply(`📋 *Active orders today (${rows.length})*\n\n${lines.join("\n\n")}`, {
-		parse_mode: "Markdown",
-	});
+	await tgSend(token, chatId, `📋 *Active orders today (${rows.length})*\n\n${lines.join("\n\n")}`, "Markdown");
 }
 
-async function cmdSummary(ctx: Context) {
-	const chatId = ctx.msg?.chat.id.toString() ?? "";
-	const role = await getRoleForChat(chatId);
+async function cmdSummary(token: string, chatId: number) {
+	const role = await getRoleForChat(chatId.toString());
 	if (role !== "owner") {
-		await ctx.reply("⛔ This command is for owners only.");
+		await tgSend(token, chatId, "⛔ This command is for owners only.");
 		return;
 	}
 
@@ -146,7 +144,7 @@ async function cmdSummary(ctx: Context) {
 		.map(([s, n]) => `  ${statusBadge(s)}: ${n}`)
 		.join("\n");
 
-	await ctx.reply(
+	await tgSend(token, chatId,
 		`📊 *Today's Summary*\n\n` +
 		`🧾 Total orders: ${todayOrders.length}\n` +
 		`✅ Completed: ${completed.length}\n` +
@@ -154,15 +152,14 @@ async function cmdSummary(ctx: Context) {
 		`💸 Expenses: ${etb(totalExpenses)}\n` +
 		`📈 Net profit: ${etb(revenue - totalExpenses)}\n\n` +
 		`*By status:*\n${statusLines}`,
-		{ parse_mode: "Markdown" },
+		"Markdown",
 	);
 }
 
-async function cmdWeekly(ctx: Context) {
-	const chatId = ctx.msg?.chat.id.toString() ?? "";
-	const role = await getRoleForChat(chatId);
+async function cmdWeekly(token: string, chatId: number) {
+	const role = await getRoleForChat(chatId.toString());
 	if (role !== "owner") {
-		await ctx.reply("⛔ This command is for owners only.");
+		await tgSend(token, chatId, "⛔ This command is for owners only.");
 		return;
 	}
 
@@ -178,7 +175,6 @@ async function cmdWeekly(ctx: Context) {
 		with: { items: true },
 	});
 
-	// Group by day
 	const byDay: Record<string, { revenue: number; count: number }> = {};
 	for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
 		const key = d.toISOString().slice(0, 10);
@@ -202,18 +198,16 @@ async function cmdWeekly(ctx: Context) {
 		return `  ${label}: ${etb(d.revenue)} (${d.count} orders)`;
 	});
 
-	await ctx.reply(
-		`📅 *Weekly Revenue (last 7 days)*\n\n${lines.join("\n")}\n\n` +
-		`💰 Total: ${etb(totalRevenue)}`,
-		{ parse_mode: "Markdown" },
+	await tgSend(token, chatId,
+		`📅 *Weekly Revenue (last 7 days)*\n\n${lines.join("\n")}\n\n💰 Total: ${etb(totalRevenue)}`,
+		"Markdown",
 	);
 }
 
-async function cmdPending(ctx: Context) {
-	const chatId = ctx.msg?.chat.id.toString() ?? "";
-	const role = await getRoleForChat(chatId);
+async function cmdPending(token: string, chatId: number) {
+	const role = await getRoleForChat(chatId.toString());
 	if (role !== "owner") {
-		await ctx.reply("⛔ This command is for owners only.");
+		await tgSend(token, chatId, "⛔ This command is for owners only.");
 		return;
 	}
 
@@ -224,7 +218,7 @@ async function cmdPending(ctx: Context) {
 	});
 
 	if (rows.length === 0) {
-		await ctx.reply("✅ No pending orders.");
+		await tgSend(token, chatId, "✅ No pending orders.");
 		return;
 	}
 
@@ -235,16 +229,13 @@ async function cmdPending(ctx: Context) {
 		return `#${o.id.slice(-4)} ${orderTypeBadge(o.type)} — ${statusBadge(o.status)}${extra}\n  ${o.items.map((i) => `${i.quantity}× ${i.name}`).join(", ")}`;
 	});
 
-	await ctx.reply(`⏳ *Pending orders (${rows.length})*\n\n${lines.join("\n\n")}`, {
-		parse_mode: "Markdown",
-	});
+	await tgSend(token, chatId, `⏳ *Pending orders (${rows.length})*\n\n${lines.join("\n\n")}`, "Markdown");
 }
 
-async function cmdKitchen(ctx: Context) {
-	const chatId = ctx.msg?.chat.id.toString() ?? "";
-	const role = await getRoleForChat(chatId);
+async function cmdKitchen(token: string, chatId: number) {
+	const role = await getRoleForChat(chatId.toString());
 	if (role !== "owner" && role !== "chef") {
-		await ctx.reply("⛔ This command is for chefs and owners.");
+		await tgSend(token, chatId, "⛔ This command is for chefs and owners.");
 		return;
 	}
 
@@ -255,7 +246,7 @@ async function cmdKitchen(ctx: Context) {
 	});
 
 	if (rows.length === 0) {
-		await ctx.reply("🍽️ No orders in the kitchen right now.");
+		await tgSend(token, chatId, "🍽️ No orders in the kitchen right now.");
 		return;
 	}
 
@@ -265,31 +256,27 @@ async function cmdKitchen(ctx: Context) {
 		return `#${o.id.slice(-4)} ${orderTypeBadge(o.type)} — ${elapsed}min ago\n${o.items.map((i) => `  ${i.quantity}× ${i.name}`).join("\n")}${o.notes ? `\n  📝 ${o.notes}` : ""}`;
 	});
 
-	await ctx.reply(
+	await tgSend(token, chatId,
 		`👨‍🍳 *In kitchen (${rows.length})*\n\nUse /ready [id] to mark done.\n\n${lines.join("\n\n")}`,
-		{ parse_mode: "Markdown" },
+		"Markdown",
 	);
 }
 
-async function cmdReady(ctx: Context) {
-	const chatId = ctx.msg?.chat.id.toString() ?? "";
-	const role = await getRoleForChat(chatId);
+async function cmdReady(token: string, chatId: number, text: string) {
+	const role = await getRoleForChat(chatId.toString());
 	if (role !== "owner" && role !== "chef") {
-		await ctx.reply("⛔ This command is for chefs and owners.");
+		await tgSend(token, chatId, "⛔ This command is for chefs and owners.");
 		return;
 	}
 
-	// Extract order ID from command text: /ready abc1
-	const text = ctx.msg?.text ?? "";
 	const parts = text.trim().split(/\s+/);
 	const shortId = parts[1];
 
 	if (!shortId) {
-		await ctx.reply("Usage: /ready [order_id]\nExample: /ready a1b2");
+		await tgSend(token, chatId, "Usage: /ready [order_id]\nExample: /ready a1b2");
 		return;
 	}
 
-	// Find order by last-4 of ID or full ID
 	const allKitchenOrders = await db.query.orders.findMany({
 		where: (o, { eq }) => eq(o.status, "in_kitchen"),
 	});
@@ -298,7 +285,7 @@ async function cmdReady(ctx: Context) {
 	);
 
 	if (!match) {
-		await ctx.reply(`❌ No in-kitchen order found with ID "${shortId}".`);
+		await tgSend(token, chatId, `❌ No in-kitchen order found with ID "${shortId}".`);
 		return;
 	}
 
@@ -307,61 +294,16 @@ async function cmdReady(ctx: Context) {
 		.set({ status: "ready", updatedAt: new Date() })
 		.where(eq(orders.id, match.id));
 
-	await ctx.reply(`✅ Order #${match.id.slice(-4)} marked as ready.`);
-
-	// Notify waiters
+	await tgSend(token, chatId, `✅ Order #${match.id.slice(-4)} marked as ready.`);
 	await sendToWaiters(`✅ Order #${match.id.slice(-4)} is ready for pickup/delivery`);
-}
-
-// ─── Register commands on bot ─────────────────────────────────────────────────
-
-function registerCommands(bot: Bot) {
-	bot.command("orders", cmdOrders);
-	bot.command("summary", cmdSummary);
-	bot.command("weekly", cmdWeekly);
-	bot.command("pending", cmdPending);
-	bot.command("kitchen", cmdKitchen);
-	bot.command("ready", cmdReady);
-	bot.command("myid", (ctx) =>
-		ctx.reply(
-			`Your chat ID is:\n\`${ctx.msg?.chat.id}\`\n\nPaste this into PlateForm → Settings → Telegram → Contacts.`,
-			{ parse_mode: "Markdown" },
-		),
-	);
-	bot.command("start", (ctx) =>
-		ctx.reply(
-			"👋 *PlateForm Bot*\n\nAvailable commands:\n" +
-			"/orders — Today's active orders\n" +
-			"/summary — Today's summary\n" +
-			"/weekly — Weekly revenue\n" +
-			"/pending — Awaiting action\n" +
-			"/kitchen — In-kitchen orders (chef)\n" +
-			"/ready [id] — Mark order ready (chef)\n" +
-			"/myid — Get your Telegram chat ID",
-			{ parse_mode: "Markdown" },
-		),
-	);
 }
 
 // ─── Webhook entry point ──────────────────────────────────────────────────────
 
-async function tgSend(token: string, chatId: number | string, text: string, parseMode?: string) {
-	const body: Record<string, unknown> = { chat_id: chatId, text };
-	if (parseMode) body.parse_mode = parseMode;
-	const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(body),
-	});
-	const json = (await res.json()) as { ok: boolean; description?: string };
-	if (!json.ok) throw new Error(`Telegram sendMessage failed: ${json.description}`);
-}
-
 export async function handleWebhookUpdate(update: unknown): Promise<void> {
 	try {
-		const s = await getSettings();
-		if (!s?.botTokenEncrypted) return;
-		const token = decrypt(s.botTokenEncrypted);
+		const token = await getToken();
+		if (!token) return;
 
 		// biome-ignore lint/suspicious/noExplicitAny: dynamic telegram update
 		const upd = update as any;
@@ -370,12 +312,9 @@ export async function handleWebhookUpdate(update: unknown): Promise<void> {
 
 		const chatId: number = msg.chat?.id;
 		const text: string = msg.text ?? "";
-		const cmd = text.split("@")[0].split(" ")[0]; // strip @botname and args
+		const cmd = text.split("@")[0].split(" ")[0];
 
 		switch (cmd) {
-			case "/myid":
-				await tgSend(token, chatId, `Your chat ID is:\n\`${chatId}\`\n\nPaste this into PlateForm → Settings → Telegram → Contacts.`, "Markdown");
-				break;
 			case "/start":
 				await tgSend(token, chatId,
 					"👋 *PlateForm Bot*\n\nAvailable commands:\n" +
@@ -389,13 +328,27 @@ export async function handleWebhookUpdate(update: unknown): Promise<void> {
 					"Markdown",
 				);
 				break;
-			default: {
-				const bot = await getBot();
-				if (bot) {
-					// biome-ignore lint/suspicious/noExplicitAny: grammy expects Update type
-					await bot.handleUpdate(update as any);
-				}
-			}
+			case "/myid":
+				await tgSend(token, chatId, `Your chat ID is:\n\`${chatId}\`\n\nPaste this into PlateForm → Settings → Telegram → Contacts.`, "Markdown");
+				break;
+			case "/orders":
+				await cmdOrders(token, chatId);
+				break;
+			case "/summary":
+				await cmdSummary(token, chatId);
+				break;
+			case "/weekly":
+				await cmdWeekly(token, chatId);
+				break;
+			case "/pending":
+				await cmdPending(token, chatId);
+				break;
+			case "/kitchen":
+				await cmdKitchen(token, chatId);
+				break;
+			case "/ready":
+				await cmdReady(token, chatId, text);
+				break;
 		}
 	} catch (err) {
 		console.error("[telegram] handleWebhookUpdate error:", err);
@@ -412,9 +365,10 @@ async function getChatIdsByRole(role: "owner" | "chef" | "waiter"): Promise<stri
 }
 
 async function send(chatIds: string[], message: string): Promise<void> {
-	const bot = await getBot();
-	if (!bot || chatIds.length === 0) return;
-	await Promise.allSettled(chatIds.map((id) => bot.api.sendMessage(id, message)));
+	if (chatIds.length === 0) return;
+	const token = await getToken();
+	if (!token) return;
+	await Promise.allSettled(chatIds.map((id) => tgSend(token, id, message)));
 }
 
 /** Sends to owners + chefs (used for new staff-created orders) */
