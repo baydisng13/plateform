@@ -1,8 +1,8 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/app-shell";
-import { getExpenses, createExpense } from "@/lib/server/expenses";
+import { getExpenses, createExpense, deleteExpense } from "@/lib/server/expenses";
 import { getExpenseCategories } from "@/lib/server/settings";
 import { formatETB } from "@/lib/utils";
 import {
@@ -11,6 +11,15 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,11 +32,28 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
+type DateRange = "today" | "week" | "month" | "all";
+
+function getDateBounds(range: DateRange): { from?: string; to?: string } {
+	const now = new Date();
+	if (range === "all") return {};
+	const from = new Date(now);
+	if (range === "today") from.setHours(0, 0, 0, 0);
+	else if (range === "week") from.setDate(from.getDate() - 6);
+	else if (range === "month") from.setDate(1);
+	return { from: from.toISOString() };
+}
+
 export const Route = createFileRoute("/_auth/expenses")({
 	head: () => ({ meta: [{ title: "Expenses — PlateForm" }] }),
-	loader: async () => {
+	validateSearch: (s: Record<string, unknown>) => ({
+		range: (s.range as DateRange) ?? "month",
+	}),
+	loaderDeps: ({ search }) => ({ range: search.range }),
+	loader: async ({ deps }) => {
+		const bounds = getDateBounds(deps.range);
 		const [expenses, categories] = await Promise.all([
-			getExpenses({ data: undefined }),
+			getExpenses({ data: bounds }),
 			getExpenseCategories(),
 		]);
 		return { expenses, categories };
@@ -37,9 +63,11 @@ export const Route = createFileRoute("/_auth/expenses")({
 
 function ExpensesPage() {
 	const { expenses, categories } = Route.useLoaderData();
+	const { range } = Route.useSearch();
 	const router = useRouter();
 	const [catFilter, setCatFilter] = useState<string>("all");
 	const [dialogOpen, setDialogOpen] = useState(false);
+	const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
 	const catMap = Object.fromEntries(categories.map((c) => [c.id, c.name]));
 	const visible = expenses.filter((e) => catFilter === "all" || e.categoryId === catFilter);
@@ -58,6 +86,20 @@ function ExpensesPage() {
 		router.invalidate();
 	};
 
+	const handleDelete = async () => {
+		if (!deleteTarget) return;
+		await deleteExpense({ data: { id: deleteTarget } });
+		setDeleteTarget(null);
+		router.invalidate();
+	};
+
+	const ranges: Array<{ value: DateRange; label: string }> = [
+		{ value: "today", label: "Today" },
+		{ value: "week", label: "Last 7 Days" },
+		{ value: "month", label: "This Month" },
+		{ value: "all", label: "All Time" },
+	];
+
 	return (
 		<AppShell>
 			<PageHeader
@@ -71,19 +113,39 @@ function ExpensesPage() {
 				}
 			/>
 			<div className="flex flex-1 overflow-hidden">
-				<div className="flex-1 overflow-y-auto p-6">
+				<div className="flex-1 overflow-y-auto p-4 sm:p-6">
 					<div className="grid grid-cols-3 gap-4">
-						<KPI label="This Month" value={formatETB(monthTotal)} sub={`${expenses.length} entries`} />
+						<KPI label="Period Total" value={formatETB(monthTotal)} sub={`${expenses.length} entries`} />
 						<KPI label="Filtered Total" value={formatETB(total)} sub={`${visible.length} entries`} />
 						<KPI
 							label="Avg / Entry"
 							value={formatETB(monthTotal / Math.max(expenses.length, 1))}
-							sub="All categories"
+							sub="Filtered period"
 						/>
 					</div>
 
-					<div className="mt-6 flex flex-wrap gap-2">
-						{[{ id: "all", name: "All" }, ...categories].map((c) => (
+					{/* Date range pills */}
+					<div className="mt-5 flex flex-wrap gap-2">
+						{ranges.map((r) => (
+							<button
+								key={r.value}
+								type="button"
+								onClick={() => router.navigate({ search: { range: r.value } })}
+								className={cn(
+									"rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all",
+									range === r.value
+										? "bg-foreground text-background"
+										: "bg-muted text-muted-foreground hover:text-foreground",
+								)}
+							>
+								{r.label}
+							</button>
+						))}
+					</div>
+
+					{/* Category pills */}
+					<div className="mt-2 flex flex-wrap gap-2">
+						{[{ id: "all", name: "All categories" }, ...categories].map((c) => (
 							<button
 								key={c.id}
 								type="button"
@@ -108,18 +170,19 @@ function ExpensesPage() {
 									<th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Category</th>
 									<th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Date</th>
 									<th className="px-5 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Amount</th>
+									<th className="px-5 py-3 w-10" />
 								</tr>
 							</thead>
 							<tbody>
 								{visible.length === 0 ? (
 									<tr>
-										<td colSpan={4} className="px-5 py-12 text-center text-sm text-muted-foreground">
+										<td colSpan={5} className="px-5 py-12 text-center text-sm text-muted-foreground">
 											No expenses found.
 										</td>
 									</tr>
 								) : (
 									visible.map((e) => (
-										<tr key={e.id} className="border-b last:border-0">
+										<tr key={e.id} className="group border-b last:border-0 hover:bg-muted/30">
 											<td className="px-5 py-4 font-medium">{e.description ?? "—"}</td>
 											<td className="px-5 py-4">
 												<span className="rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
@@ -130,6 +193,16 @@ function ExpensesPage() {
 												{new Date(e.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
 											</td>
 											<td className="px-5 py-4 text-right font-bold tabular-nums">{formatETB(e.amount)}</td>
+											<td className="px-3 py-4">
+												<button
+													type="button"
+													onClick={() => setDeleteTarget(e.id)}
+													className="grid size-7 place-items-center rounded-lg text-muted-foreground opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+													aria-label="Delete expense"
+												>
+													<Trash2 className="size-3.5" />
+												</button>
+											</td>
 										</tr>
 									))
 								)}
@@ -169,6 +242,23 @@ function ExpensesPage() {
 				onSave={handleAddExpense}
 				categories={categories}
 			/>
+
+			<AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
+				<AlertDialogContent className="sm:max-w-sm">
+					<AlertDialogHeader>
+						<AlertDialogTitle>Delete this expense?</AlertDialogTitle>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={handleDelete}
+							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+						>
+							Delete
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</AppShell>
 	);
 }

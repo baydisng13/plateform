@@ -10,7 +10,7 @@ import {
 	Bell,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { restaurant } from "@/lib/mock-data";
+import { useRestaurant } from "@/lib/restaurant-context";
 import { cn } from "@/lib/utils";
 
 const nav: Array<{
@@ -29,6 +29,7 @@ const nav: Array<{
 
 export function AppShell({ children }: { children: ReactNode }) {
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
+	const { initial } = useRestaurant();
 
 	return (
 		<div className="flex h-screen w-full overflow-hidden bg-background text-foreground">
@@ -39,7 +40,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 					className="mb-8 flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg"
 					aria-label="PlateForm home"
 				>
-					<span className="text-xl font-bold">{restaurant.initial}</span>
+					<span className="text-xl font-bold">{initial}</span>
 				</Link>
 
 				<nav className="flex flex-1 flex-col gap-1">

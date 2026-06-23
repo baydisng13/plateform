@@ -188,6 +188,38 @@ export const confirmPayment = createServerFn({ method: "POST" })
 	});
 
 // Analytics
+export const getWeeklyStats = createServerFn({ method: "GET" }).handler(async () => {
+	await requireOwner();
+	const result: Array<{ date: string; revenue: number; expensesTotal: number; ordersCount: number }> = [];
+	for (let i = 6; i >= 0; i--) {
+		const day = new Date();
+		day.setHours(0, 0, 0, 0);
+		day.setDate(day.getDate() - i);
+		const next = new Date(day);
+		next.setDate(next.getDate() + 1);
+
+		const [dayOrders, dayExpenses] = await Promise.all([
+			db.query.orders.findMany({
+				where: (o, { and, gte, lt }) => and(gte(o.createdAt, day), lt(o.createdAt, next)),
+				with: { items: true },
+			}),
+			db.select().from(expenses).where(and(gte(expenses.date, day), lt(expenses.date, next))),
+		]);
+
+		const revenue = dayOrders
+			.filter((o) => o.status === "completed")
+			.reduce((s, o) => s + o.items.reduce((si, i) => si + i.quantity * i.unitPrice, 0), 0);
+
+		result.push({
+			date: day.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }),
+			revenue,
+			expensesTotal: dayExpenses.reduce((s, e) => s + e.amount, 0),
+			ordersCount: dayOrders.length,
+		});
+	}
+	return result;
+});
+
 export const getDailyStats = createServerFn({ method: "GET" }).handler(async () => {
 	await requireOwner();
 	const today = new Date();
