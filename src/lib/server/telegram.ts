@@ -16,14 +16,18 @@ async function getSettings() {
 async function getBot(): Promise<Bot | null> {
 	try {
 		const s = await getSettings();
-		if (!s?.botTokenEncrypted) return null;
+		if (!s?.botTokenEncrypted) {
+			console.error("[telegram] getBot: no botTokenEncrypted in DB");
+			return null;
+		}
 		if (!_bot) {
 			const token = decrypt(s.botTokenEncrypted);
 			_bot = new Bot(token);
 			registerCommands(_bot);
 		}
 		return _bot;
-	} catch {
+	} catch (err) {
+		console.error("[telegram] getBot error:", err);
 		return null;
 	}
 }
